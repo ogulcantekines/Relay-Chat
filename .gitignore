@@ -12,6 +12,8 @@ dist
 dist-ssr
 *.local
 
+notes.md
+
 .env
 
 # Editor directories and files
@@ -24,3 +26,4 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+

@@ -10,6 +10,15 @@ body{
   background-position: center;
 }
 
+/* Disable text cursor everywhere except inputs and textareas */
+* {
+  caret-color: transparent;
+}
+
+input, textarea {
+  caret-color: auto;
+}
+
 /* Custom scrollbar for sidebar */
 .sidebar-scrollbar::-webkit-scrollbar {
   width: 6px;

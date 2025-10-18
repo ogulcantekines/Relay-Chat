@@ -1,15 +1,29 @@
-import React from 'react'
+import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
+import useLogin from '../../hooks/auth/useLogin';
 
 const Login = () => {
-  return (
+
+	const [inputs, setInputs] = useState({//inputs state objesi oluşturuluyor ve useState ile yönetiliyor
+		username: "",
+		password: ""
+	});
+	const { loading, login } = useLogin();
+
+	const handleSubmit = async (e) => { // form submit işlemi için handleSubmit fonksiyonu
+		e.preventDefault(); // sayfanın yenilenmesini engeller
+		await login(inputs); // login işleminin tamamlanmasını bekle
+	};
+
+	//görsel kısım
+	return (
 		<div className='flex flex-col items-center justify-center min-w-96 mx-auto'>
 			<div className='w-full p-6 rounded-lg shadow-md bg-gray-400 bg-clip-padding backdrop-filter backdrop-blur-sm bg-opacity-0'>
 				<h1 className='text-3xl font-semibold text-center text-gray-300'>
-					Login
-					<span className='text-blue-500'> ChatApp</span>
+					Login<span className='text-blue-500'> ChatApp</span>
 				</h1>
 
-				<form>
+				<form onSubmit={handleSubmit}>
 					<div>
 						<label className='label p-2'>
 							<span className='text-base label-text'>Username</span>
@@ -18,6 +32,11 @@ const Login = () => {
 							type='text'
 							placeholder='Enter username'
 							className='w-full input input-bordered h-10'
+							name='username'
+							value={inputs.username}
+							onChange={(e) => setInputs({ ...inputs, username: e.target.value })}
+						//input alanında değişiklik olduğunda tetiklenir, e parametresi event objesini temsil eder. e objesinin target özelliği input elementini temsil eder ve value özelliği inputun o anki değerini verir
+						//setInputs fonksiyonu ile inputs stateini güncelliyoruz. ...inputs ile mevcut state'i koruyoruz ve sadece username alanını güncelliyoruz
 						/>
 					</div>
 
@@ -29,18 +48,31 @@ const Login = () => {
 							type='password'
 							placeholder='Enter Password'
 							className='w-full input input-bordered h-10'
+							name='password'
+							value={inputs.password}
+							onChange={(e) => setInputs({ ...inputs, password: e.target.value })}
+						//input alanında değişiklik olduğunda tetiklenir, e parametresi event objesini temsil eder. e objesinin target özelliği input elementini temsil eder ve value özelliği inputun o anki değerini verir
+						//setInputs fonksiyonu ile inputs stateini güncelliyoruz. ...inputs ile mevcut state'i koruyoruz ve sadece password alanını güncelliyoruz
 						/>
 					</div>
 
-                    <div>
-                        <a href="#" className='text-sm  hover:underline hover:text-blue-600 mt-2 inline-block'>
-                            Don't have an account? Sign Up
-                        </a>
-                    </div>
+					<Link to='/signup'> {/* app.jsx te tanımlı link kısmı orada /signup a link to gelince ne yapılacağı yazıyor */}
+						<p className='mt-4 text-sm text-left text-gray-200 hover:underline mb-3'>
+							Don't have an account? Sign Up
+						</p>
+					</Link>
 
-                    <div>
-                        <button className='btn btn-block btn-sm mt-2 border border-slate-700'>Login</button>
-                    </div>
+					{/* Login butonu */}
+					<div>
+						<button
+							type="submit"
+							className='btn btn-block btn-sm mt-2 border border-slate-700'
+							disabled={loading}
+						>
+							{loading ? <span className="loading loading-spinner"></span> : "Login"}
+							{/* eğer loading true ise yükleniyor spinnerı göster, değilse Login yazısını göster */}
+						</button>
+					</div>
 
 				</form>
 			</div>

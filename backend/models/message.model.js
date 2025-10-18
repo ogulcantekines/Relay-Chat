@@ -16,6 +16,20 @@ const messageSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    isRead:{ //bunu okundu özelliği için ekledik. çağırmasak bile otomatik artık messages collectionına bir nesne eklersek isRead false olarak gelecek
+        type: Boolean,
+        default: false
+    },
+
+    isEdited:{ // mesaj düzenleme özelliği için eklendi
+        type: Boolean,
+        default: false
+    },
+    editedAt:{ // mesaj düzenleme özelliği için eklendi
+        type: Date,
+        default: null
+    }, 
+    
     timestamp:{
         type: Date,
         default: Date.now
