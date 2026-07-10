@@ -1,4 +1,4 @@
-import {Server} from "socket.io";
+import { Server } from "socket.io";
 import http from "http";
 import express from "express";
 import Message from "../models/message.model.js";
@@ -8,8 +8,9 @@ const server = http.createServer(app); //ana kapsayıcı http serverı oluşturm
 
 const io = new Server(server, {  //ana kapsayıcı http serverını kullanarak socket.io subserverı oluşturma
     cors: {
-        origin: ["http://localhost:3000"],
-        methods: ["GET", "POST"]
+        origin: process.env.CLIENT_URL || "http://localhost:3000",
+        methods: ["GET", "POST"],
+        credentials: true
     }
 });
 
@@ -33,18 +34,18 @@ io.on("connection", (socket) => {
     // Kullanıcı ID'sini handshake'ten al ve socket ID ile eşle bu handshake query kısmı frontendden socket bağlantısı kurarken gönderilen userId yi içerir
     const userId = socket.handshake.query.userId;
     if (userId !== "undefined") userSocketMap[userId] = socket.id;
-    
+
     io.emit("getOnlineUsers", Object.keys(userSocketMap));// Tüm bağlı kullanıcılara online kullanıcı listesini gönder
     // object keys ile userSocketMap in keylerini alıyoruz yani userId1 : socketıd1 ise object keys ile sadece userId1 i alıyoruz
     //backend forntend veri gönderimlerinde otomatik olarak json a çevirir
     //örneğin userSocketMap = { userId1: "socketId1", userId2: "socketId2" } ise Object.keys(userSocketMap) = ["userId1", "userId2"] olur
-    
+
 
     // Yazıyor göstergesi - kullanıcı yazmaya başladığında
     socket.on("typing", (data) => {
         const { receiverId } = data; //destructor ile data nesnesinden receiverId yi alıyoruz
         const receiverSocketId = getReceiverSocketId(receiverId); // receiverId ye karşılık gelen socketId yi alıyoruz
-        
+
         if (receiverSocketId) {
             // Alıcıya yazıyor bilgisi gönder
             io.to(receiverSocketId).emit("userTyping", {
@@ -52,12 +53,12 @@ io.on("connection", (socket) => {
             }); // nesne olarak yayınlıyoruz ki receiver tarafında data.senderId ile erişilebilsin
         }
     });
-    
+
     // Yazıyor göstergesini durdur - kullanıcı yazmayı bıraktığında
     socket.on("stopTyping", (data) => {
         const { receiverId } = data;
         const receiverSocketId = getReceiverSocketId(receiverId);
-        
+
         if (receiverSocketId) {
             // Alıcıya yazmanın durduğu bilgisini gönder
             io.to(receiverSocketId).emit("userStoppedTyping", {
@@ -68,17 +69,17 @@ io.on("connection", (socket) => {
 
     // Chat açılması frontendde kolay kontrol ediliyor ama backendde bu event dinlenip işlem yapılıyor
     socket.on("chatOpened", async (data) => { //bu event chatin açık olup olamadığını backend e bildiriyor
-       
+
         // data nesnesi içinde otherUserId var
-        const { otherUserId } = data; 
-        
+        const { otherUserId } = data;
+
         try {
             // Bu kullanıcıya gönderilen okunmamış mesajları bul ve güncelle, burası database de messages koleksiyonunda isRead alanını true yapıyor
             // otherUserId, chat açılan kişinin userId'si yani karşı tarafın id'si userId ise kendi id'miz
-            
+
             // ✅ FIX: Hem isRead: false olan HEM DE isRead field'ı olmayan (eski) mesajları güncelle
             await Message.updateMany(
-                { 
+                {
                     senderId: otherUserId,  // Bu kısım ilk parametre ve filtreleme için kullanılıyor
                     receiverId: userId,      //örneğin senderıd si emitlenen değer olup receiver idsi kendi idmiz olup bir de mesaj henüz okunmamış ise
                     $or: [
@@ -86,7 +87,7 @@ io.on("connection", (socket) => {
                         { isRead: { $exists: false } }        // isRead field'ı yoksa eşleş
                     ] //or ve exist $ operatörleri ile birlikte kullanılıyor çünkü isim çakışması olabilir bunların isim olmadığını belirtiyoruz operatörler
                 },
-                { 
+                {
                     isRead: true // Bu kısım ikinci parametre ve güncelleme için kullanılıyor
                 }
             );
@@ -103,7 +104,7 @@ io.on("connection", (socket) => {
             console.error("Error marking messages as read:", error);
         }
     });
-    
+
     // Kullanıcı bağlantısı kesildiğinde temizlik yap. frontendde logouta basılınca uselogout tetiklenir ve socket bağlantısı kesilir.
     socket.on("disconnect", () => {
         console.log("A user disconnected:", socket.id);
@@ -112,7 +113,7 @@ io.on("connection", (socket) => {
     });
 });
 
-export {io, server, app};
+export { io, server, app };
 
 
 //io.emit veya io.to(...).emit(...) kullanımı backendden clienta event göndermek için kullanılır

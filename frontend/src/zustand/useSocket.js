@@ -12,7 +12,8 @@ const useSocket = create((set, get) => ({
         if (get().socket?.connected) return; // Zaten bağlıysa çık
 
         //ana http bağlantı adresi
-        const socket = io("http://localhost:5000", { //backenddeki socket aktif oluyor, backenddeki io.on("connection", ...) kısmı tetiklenir
+        const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:5000";
+        const socket = io(SOCKET_URL, { //backenddeki socket aktif oluyor, backenddeki io.on("connection", ...) kısmı tetiklenir
             query: {
                 userId: userId // Kullanıcı kimliğini handshake'e ekleriz ve backend ile bağlantı kurarız
             }
