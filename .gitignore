@@ -27,3 +27,9 @@ notes.md
 *.sln
 *.sw?
 
+# Additional ignores
+.env.*
+!.env.example
+**/node_modules
+frontend/dist
+coverage
