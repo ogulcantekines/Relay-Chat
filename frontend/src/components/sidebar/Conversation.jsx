@@ -1,5 +1,6 @@
 import useConversation from "../../zustand/useConversation";
 import useSocket from "../../zustand/useSocket";
+import { FaClock } from "react-icons/fa";
 import useGlobalTyping from "../../hooks/socket/useGlobalTyping"; // Tüm konuşmalar için global yazıyor hook'u
 
 
@@ -12,6 +13,7 @@ const Conversation = (props) => {
   const isSelected = selectedConversation?._id === props.conversation._id; // Bu conversation'ın seçili olup olmadığını kontrol et. ? optional chaining ile güvenli erişim. eğer undefined ise hata vermez.
   const isOnline = onlineUsers.includes(props.conversation._id);
   const isThisUserTyping = isUserTyping(props.conversation._id); // Bu kullanıcının yazıyor olup olmadığını kontrol et
+  const isPending = props.conversation.status === 'pending';
 
   return (
 
@@ -33,6 +35,11 @@ const Conversation = (props) => {
             {/* Kullanıcı adı */}
             <div className="font-semibold text-white">{props.conversation.fullName}</div>
 
+            {/* EĞER BEKLEYEN İSTEKSE SAAT İKONUNU GÖSTER */}
+            {isPending && (
+              <FaClock className="text-amber-500 text-xs" title="Waiting for reply" />
+            )}
+
             {/* Global yazıyor göstergesi - aktif sohbette olmasa bile göster. eğer yazma durumu true ise yani yazıyorsa göster */}
             {isThisUserTyping && (
               <div className="flex items-center gap-1">
@@ -51,6 +58,8 @@ const Conversation = (props) => {
             {/* eğer doğruysa ilk durum olan yazıyor metnini göster yanlışsa ikinci durum olan last message yazısını göster*/}
             {isThisUserTyping ? (
               <span className="text-white italic">typing...</span>
+            ) : isPending ? (
+              <span className="text-amber-500 italic">Waiting for reply</span>
             ) : (
               "last message..."
             )}

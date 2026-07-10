@@ -1,18 +1,31 @@
 import { useState } from "react";
 import toast from "react-hot-toast";
 import useConversation from "../../zustand/useConversation";
+import useFriendStore from "../../zustand/useFriend"; // Arkadaş listesi kontrolü için eklendi
+
+// useSendMessage - Mesaj gönderme hook'u
+// MessageInput bileşeninde kullanılır. Hem normal sohbetlerde hem de "draft" sohbetlerde çalışır.
+//
+// 🔑 Draft Conversation Mantığı:
+// Kullanıcı AddFriend'den birine mesaj yazmak istediğinde, sidebar'a henüz eklenmemiş bir
+// "taslak" (draft) conversation oluşur. İlk mesaj gönderildiğinde:
+// 1. Backend conversation'ı otomatik oluşturur (DB'ye kaydeder)
+// 2. Bu hook sidebar'da yeni conversation'ı gösterir
+// Bu "lazy creation" yaklaşımı gereksiz boş conversation'ların DB'de oluşmasını önler.
 
 const useSendMessage = () => {
     const [loading, setLoading] = useState(false);
-    const {messages, setMessages, selectedConversation} = useConversation();
+    const { messages, setMessages, selectedConversation, setSelectedConversation, conversations, setConversations } = useConversation();
+    const friends = useFriendStore((state) => state.friends); // Arkadaş listesini al
 
     const sendMessage = async (message) => {
-        if(!selectedConversation) {
+        if (!selectedConversation) {
             toast.error("No conversation selected");
             return;
         }
         setLoading(true);
         try {
+            // Backend'e POST isteği → /api/messages/send/:receiverId
             const res = await fetch(`/api/messages/send/${selectedConversation._id}`, {
                 method: 'POST',
                 headers: {
@@ -22,11 +35,30 @@ const useSendMessage = () => {
             });
 
             if (res.ok) {
-                const data = await res.json(); 
+                const data = await res.json();
                 console.log('Message sent:', data);
-                toast.success("Message sent successfully");
+                toast.success("Message sent successfully"); // UX: Sürekli toast çıkması rahatsız edebilir
 
+                // Mesajı local state'e ekle (anında UI'da görünsün)
                 setMessages([...messages, data]);
+
+                // 🔥 DRAFT CONVERSATION → SIDEBAR'A EKLEME
+                const existsInSidebar = conversations.some(c => c._id === selectedConversation._id);
+                if (!existsInSidebar) {
+
+                    // ✅ KRİTİK FIX: Gönderilen kişi zaten arkadaşımız mı kontrol et
+                    // Eğer arkadaşımızsa status "active" olmalı, değilse "pending" (Waiting for reply)
+                    const isFriend = friends.some(f => f._id === selectedConversation._id);
+
+                    const newConv = {
+                        ...selectedConversation,
+                        status: isFriend ? "active" : "pending", // Arkadaşsa aktif, değilse bekleyen
+                        lastMessage: data
+                    };
+
+                    setConversations([newConv, ...conversations]);
+                    setSelectedConversation(newConv);
+                }
             } else {
                 throw new Error("Failed to send message");
             }
