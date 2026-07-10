@@ -13,7 +13,7 @@ const generateTokenAndSetCookie = (user, res) => {
     // Token'ı çerezde sakla(HTTP only cookie olarak)
     res.cookie("token", token, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === "development",
+        secure: process.env.NODE_ENV === "production",
         maxAge: 15 * 24 * 60 * 60 * 1000,// 15 days
         sameSite: "strict"
     });
