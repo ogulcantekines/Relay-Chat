@@ -22,7 +22,19 @@ const userSchema = new mongoose.Schema({
     profilePic:{
         type: String,
         default:"",
-    }
+    },
+    friendCode:{
+        type: String,
+        required:true,
+        unique:true,
+        minlength:4,
+        maxlength:4,
+    },
+    friends:[{
+        type: mongoose.Schema.Types.ObjectId,
+        ref:"User",
+        default:[],
+    }],
 }, {timestamps:true});
 
 const User = mongoose.model("User", userSchema);
