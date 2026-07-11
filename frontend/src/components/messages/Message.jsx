@@ -2,6 +2,7 @@ import useAuth from "../../zustand/useAuth";
 import useConversation from "../../zustand/useConversation";
 import { useState } from 'react';
 import useEditMessage from "../../hooks/messages/useEditMessage";
+import useDeleteMessage from "../../hooks/messages/useDeleteMessage";
 
 
 const Message = ({ message }) => { //props ile de yapılabilir o zaman
@@ -12,6 +13,7 @@ const Message = ({ message }) => { //props ile de yapılabilir o zaman
 
     //edit ile ilgili kısım
     const { editMessage, loading } = useEditMessage(); //edit message hookunu kullanıyoruz
+    const { deleteMessage, loading: deleteLoading } = useDeleteMessage(); //mesaj silme hooku
     const [isEditing, setIsEditing] = useState(false); //mesaj düzenleme modunda mı değil mi
     const [editedText, setEditedText] = useState(message.message); // düzenlenen metin burada tutulacak
 
@@ -35,7 +37,10 @@ const Message = ({ message }) => { //props ile de yapılabilir o zaman
         });
     };
 
-    console.log("Selected Conversation in Message.jsx:", selectedConversation);
+    const handleDelete = async () => { //mesaj silme işlemi, çöp kutusuna basılırsa çalışır
+        if (!window.confirm("Bu mesajı silmek istediğinize emin misiniz?")) return;
+        await deleteMessage(message._id);
+    };
 
     const handleEditSave = async () => { //mesaj düzenleme kaydetme işlemi, save a basılırsa çalışır
         if (editedText.trim() === message.message) {
@@ -95,24 +100,35 @@ const Message = ({ message }) => { //props ile de yapılabilir o zaman
                 </div>
             ) : ( //eğer düzenleme modunda değilse normal mesaj gösterimi
                 <>
-                    <div className={`chat-bubble text-white ${bubbleBgColor} break-words max-w-xs relative group`}>
+                    <div className={`chat-bubble text-white ${bubbleBgColor} break-words max-w-xs relative group ${message.isDeleted ? "italic opacity-60" : ""}`}>
                         {message.message}
 
-                        {fromMe && (
-                            <button
-                                onClick={() => setIsEditing(true)}
-                                className="absolute -top-2 -right-2 btn btn-xs btn-circle opacity-0 group-hover:opacity-100 transition-opacity"
-                                title="Düzenle"
-                            >
-                                ✏️
-                            </button>
+                        {/* Silinen mesaj artık düzenlenemez, bu yüzden butonlar gizlenir */}
+                        {fromMe && !message.isDeleted && (
+                            <div className="absolute -top-2 -right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button
+                                    onClick={() => setIsEditing(true)}
+                                    className="btn btn-xs btn-circle"
+                                    title="Düzenle"
+                                >
+                                    ✏️
+                                </button>
+                                <button
+                                    onClick={handleDelete}
+                                    disabled={deleteLoading}
+                                    className="btn btn-xs btn-circle"
+                                    title="Sil"
+                                >
+                                    🗑️
+                                </button>
+                            </div>
                         )}
                     </div>
 
                     <div className="chat-footer opacity-70 ml-2 flex items-center gap-1.5">
                         <span className="text-xs">{formatTime()}</span>
 
-                        {message.isEdited && (
+                        {message.isEdited && !message.isDeleted && (
                             <span className="text-xs italic">(edited)</span> // mesaj düzenlendiyse edited ibaresi gösterilir
                         )}
 

@@ -11,6 +11,13 @@ export const sendMessage = async (req, res) => {
         const { message } = req.body; // request body den mesajı al
         const senderId = req.userId; // protectRoute middleware den gelen userId (giriş yapan kullanıcı)
 
+        if (!message || message.trim() === "") {
+            return res.status(400).json({ error: "Message content cannot be empty" });
+        }
+        if (message.length > 2000) {
+            return res.status(400).json({ error: "Message cannot exceed 2000 characters" });
+        }
+
         const sender = await User.findById(senderId); //senderId ile user collectionından kullanıcı bul
         const isFriend = sender.friends.includes(receiverId); //senderId ve receiverId yi içeren bir arkadaş mı kontrol et
 
@@ -164,8 +171,15 @@ export const editMessage = async (req, res) => {
             return res.status(403).json({ error: "Forbidden. You can only edit your own messages." });
         }
 
+        if (message.isDeleted) { // silinmiş mesaj düzenlenip geri getirilemez
+            return res.status(400).json({ error: "A deleted message cannot be edited" });
+        }
+
         if (!newMessage || newMessage.trim() === "") { //yeni mesaj boşsa
             return res.status(400).json({ error: "Message content cannot be empty" });
+        }
+        if (newMessage.length > 2000) {
+            return res.status(400).json({ error: "Message cannot exceed 2000 characters" });
         }
 
         message.message = newMessage.trim(); //mesajı yeni mesajla güncelle
@@ -201,3 +215,53 @@ export const editMessage = async (req, res) => {
 
 
 
+
+
+// ═══════════════════════════════════════════════════════════════
+// MESAJ SİLME
+// Route: DELETE /api/messages/:id
+// Mesaj kaydı korunur, içeriği gizlenir (WhatsApp/Discord davranışı):
+// böylece sohbet akışındaki sırası bozulmaz ve karşı taraf silindiğini görür.
+// ═══════════════════════════════════════════════════════════════
+export const deleteMessage = async (req, res) => {
+    try {
+        const { id: messageId } = req.params;
+        const userId = req.userId;
+
+        if (!mongoose.Types.ObjectId.isValid(messageId)) {
+            return res.status(400).json({ error: "Invalid message id" });
+        }
+
+        const message = await Message.findById(messageId);
+
+        if (!message) {
+            return res.status(404).json({ error: "Message not found" });
+        }
+        // Sadece mesajı gönderen silebilir
+        if (message.senderId.toString() !== userId) {
+            return res.status(403).json({ error: "Forbidden. You can only delete your own messages." });
+        }
+        if (message.isDeleted) {
+            return res.status(400).json({ error: "Message is already deleted" });
+        }
+
+        message.isDeleted = true;
+        message.message = "This message was deleted";
+        await message.save();
+
+        // Karşı taraf açık sohbetteyse anında güncellensin
+        const receiverSocketId = getReceiverSocketId(message.receiverId);
+        if (receiverSocketId) {
+            io.to(receiverSocketId).emit("messageDeleted", { messageId: message._id });
+        }
+
+        res.status(200).json({
+            message: "Message deleted successfully",
+            deletedMessage: message
+        });
+
+    } catch (error) {
+        console.error("Error deleting message:", error);
+        res.status(500).json({ error: "Internal Server Error" });
+    }
+};

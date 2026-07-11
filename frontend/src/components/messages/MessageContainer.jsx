@@ -7,6 +7,7 @@ import useListenTyping from "../../hooks/socket/useListenTyping";
 import useListenMessagesRead from "../../hooks/socket/useListenMessagesRead";
 import useClearConversation from "../../hooks/messages/useClearConversation";
 import useListenEditedMessages from "../../hooks/socket/useListenEditedMessages";
+import useListenDeletedMessages from "../../hooks/socket/useListenDeletedMessages";
 import useAuth from "../../zustand/useAuth";
 import useRespondToMessageRequests from "../../hooks/friends/useRespondToMessageRequests";
 import { useEffect, useState } from "react";
@@ -68,6 +69,7 @@ const MessageContainer = () => {
 
     useListenMessagesRead(); // Okundu bildirimlerini dinle
     useListenEditedMessages(); // Düzenlenen mesajları dinle
+    useListenDeletedMessages(); // Silinen mesajları dinle
 
     // ═══════════ CHAT AÇILMA BİLDİRİMİ ═══════════
     // Backend'e "bu sohbeti açtım" bilgisi gönder (okundu bilgisi için)
