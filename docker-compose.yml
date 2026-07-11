@@ -1,0 +1,34 @@
+services:
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_DATABASE: chatapp
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      # Uygulama, veritabanı gerçekten sorgu alabilir duruma gelmeden başlamasın
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  app:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "${PORT:-5000}:5000"
+    environment:
+      NODE_ENV: production
+      PORT: 5000
+      # Compose ağı içinde servis adı host olarak kullanılır
+      MONGO_URI: mongodb://mongo:27017/chatapp
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required, set it in .env}
+      CLIENT_URL: ${CLIENT_URL:-http://localhost:5000}
+    depends_on:
+      mongo:
+        condition: service_healthy
+
+volumes:
+  mongo-data:

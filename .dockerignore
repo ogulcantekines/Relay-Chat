@@ -1,0 +1,15 @@
+node_modules
+**/node_modules
+frontend/dist
+.git
+.gitignore
+.env
+.env.*
+!.env.example
+npm-debug.log*
+*.log
+notes.md
+README.md
+.github
+.vscode
+.idea
