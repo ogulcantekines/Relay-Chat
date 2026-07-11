@@ -127,3 +127,122 @@ export const logout = (req, res) => {
         res.status(500).send({ message: error.message });
     }
 }
+
+// ═══════════════════════════════════════════════════════════════
+// OTURUM SAHİBİNİN BİLGİLERİ
+// Route: GET /api/auth/me
+// Sayfa yenilendiğinde frontend'in oturumu doğrulaması için.
+// ═══════════════════════════════════════════════════════════════
+export const getMe = async (req, res) => {
+    try {
+        const user = await User.findById(req.userId).select("-password");
+
+        if (!user) {
+            return res.status(404).send({ message: "User not found" });
+        }
+
+        res.status(200).send({
+            user: {
+                _id: user._id,
+                fullName: user.fullName,
+                username: user.username,
+                gender: user.gender,
+                profilePic: user.profilePic,
+                friendCode: user.friendCode
+            }
+        });
+    } catch (error) {
+        res.status(500).send({ message: error.message });
+    }
+};
+
+// ═══════════════════════════════════════════════════════════════
+// PROFİL GÜNCELLEME
+// Route: PUT /api/auth/profile
+// Görünen ad ve profil fotoğrafı güncellenir.
+// Kullanıcı adı değiştirilemez: arkadaşlık ve sohbetler ona bağlı.
+// ═══════════════════════════════════════════════════════════════
+export const updateProfile = async (req, res) => {
+    try {
+        const { fullName, profilePic } = req.body;
+        const updates = {};
+
+        if (fullName !== undefined) {
+            if (!fullName.trim() || fullName.trim().length > 50) {
+                return res.status(400).send({ message: "Full name must be between 1 and 50 characters" });
+            }
+            updates.fullName = fullName.trim();
+        }
+
+        if (profilePic !== undefined) {
+            // Sadece http(s) adresine izin ver: javascript: gibi şemalar XSS'e açık
+            if (profilePic && !/^https?:\/\/\S+$/i.test(profilePic)) {
+                return res.status(400).send({ message: "Profile picture must be a valid http(s) URL" });
+            }
+            updates.profilePic = profilePic;
+        }
+
+        if (Object.keys(updates).length === 0) {
+            return res.status(400).send({ message: "Nothing to update" });
+        }
+
+        const user = await User.findByIdAndUpdate(req.userId, updates, {
+            new: true,
+            runValidators: true
+        }).select("-password");
+
+        if (!user) {
+            return res.status(404).send({ message: "User not found" });
+        }
+
+        res.status(200).send({
+            message: "Profile updated successfully",
+            user: {
+                _id: user._id,
+                fullName: user.fullName,
+                username: user.username,
+                gender: user.gender,
+                profilePic: user.profilePic,
+                friendCode: user.friendCode
+            }
+        });
+    } catch (error) {
+        res.status(500).send({ message: error.message });
+    }
+};
+
+// ═══════════════════════════════════════════════════════════════
+// ŞİFRE DEĞİŞTİRME
+// Route: PUT /api/auth/password
+// Mevcut şifre doğrulanmadan değişiklik yapılmaz.
+// ═══════════════════════════════════════════════════════════════
+export const changePassword = async (req, res) => {
+    try {
+        const { currentPassword, newPassword } = req.body;
+
+        if (!currentPassword || !newPassword) {
+            return res.status(400).send({ message: "Current and new password are required" });
+        }
+        if (newPassword.length < 6) {
+            return res.status(400).send({ message: "New password must be at least 6 characters" });
+        }
+
+        const user = await User.findById(req.userId);
+        if (!user) {
+            return res.status(404).send({ message: "User not found" });
+        }
+
+        const isCorrect = await bcyrpt.compare(currentPassword, user.password);
+        if (!isCorrect) {
+            return res.status(400).send({ message: "Current password is incorrect" });
+        }
+
+        const salt = await bcyrpt.genSalt(10);
+        user.password = await bcyrpt.hash(newPassword, salt);
+        await user.save();
+
+        res.status(200).send({ message: "Password changed successfully" });
+    } catch (error) {
+        res.status(500).send({ message: error.message });
+    }
+};

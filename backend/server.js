@@ -46,7 +46,11 @@ app.get("/api/health", (req, res) => {
 // API route'ları
 //app. ile kullanılan işlemler express serverına uygulanır bu api işlemleri backenddeki işlemlerdir. socket işlemleri io. veya socket. ile yapılır
 
-app.use("/api/auth", authLimiter, authRoutes);
+// Limit yalnızca kimlik doğrulama denemelerine uygulanır; /me veya profil
+// güncelleme gibi oturum içi uçlar normal kullanımda bu sınıra takılmamalı.
+app.use("/api/auth/login", authLimiter);
+app.use("/api/auth/signup", authLimiter);
+app.use("/api/auth", authRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/friends", friendRoutes);
