@@ -6,6 +6,24 @@ import generateFriendCode from "../utils/generateFriendCode.js";
 export const signup = async (req, res) => {
     try {
         const { fullName, username, password, confirmPassword, gender } = req.body; // Kullanıcıdan gelen verileri al formdan girilen veriler bodyde olur
+
+        // ═══ GİRDİ DOĞRULAMA ═══
+        // Şema seviyesindeki required kuralları boş string'i yakalamıyordu,
+        // bu yüzden alanlar burada açıkça kontrol ediliyor.
+        if (!fullName?.trim() || !username?.trim() || !password || !gender) {
+            return res.status(400).send({ message: "All fields are required" });
+        }
+        if (!/^[a-zA-Z0-9_]{3,20}$/.test(username)) {
+            return res.status(400).send({
+                message: "Username must be 3-20 characters and contain only letters, numbers or underscore"
+            });
+        }
+        if (password.length < 6) {
+            return res.status(400).send({ message: "Password must be at least 6 characters" });
+        }
+        if (!["male", "female"].includes(gender)) {
+            return res.status(400).send({ message: "Gender must be either 'male' or 'female'" });
+        }
         if (password !== confirmPassword) {
             return res.status(400).send({ message: "Passwords do not match" }); //şifre eşleşmiyorsa hata döner
         }
@@ -63,6 +81,11 @@ export const signup = async (req, res) => {
 export const login = async (req, res) => {
     try {
         const { username, password } = req.body; //bodyden kullanıcı adı ve şifre al
+
+        if (!username || !password) {
+            return res.status(400).send({ message: "Username and password are required" });
+        }
+
         const user = await User.findOne({ username: username }); //users collectionında kullanıcıyı bul
 
         if (!user) {
