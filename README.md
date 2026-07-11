@@ -1,5 +1,8 @@
 # MERN Chat App
 
+[![CI](https://github.com/ogulcantekines/MERN-ChatApp/actions/workflows/ci.yml/badge.svg)](https://github.com/ogulcantekines/MERN-ChatApp/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 Real-time messaging application built with the MERN stack (MongoDB, Express, React, Node.js) and Socket.IO.
 
 Users register, find each other by username or a short friend code, send friend requests, and chat in real time with typing indicators, read receipts and message editing.
@@ -35,7 +38,29 @@ Users register, find each other by username or a short friend code, send friend 
 | Database  | MongoDB                                                  |
 | Auth      | JSON Web Tokens, bcryptjs                                |
 
+## Quick Start with Docker
+
+The fastest way to run the whole stack, including MongoDB:
+
+```bash
+# A secret is required; generate one and keep it out of version control
+echo "JWT_SECRET=$(node -e "console.log(require('crypto').randomBytes(48).toString('hex'))")" > .env
+
+docker compose up --build
+```
+
+The app is then available at <http://localhost:5000>.
+
+To stop it, and to also drop the database volume:
+
+```bash
+docker compose down     # stop
+docker compose down -v  # stop and delete stored data
+```
+
 ## Getting Started
+
+If you would rather run the services directly on your machine:
 
 ### Requirements
 
@@ -127,6 +152,11 @@ frontend/src/
 All routes below are prefixed with `/api`. Every route except signup and login
 requires the authentication cookie.
 
+### Health
+| Method | Endpoint       | Description                              |
+|--------|----------------|------------------------------------------|
+| GET    | `/health`      | Liveness probe, no authentication needed |
+
 ### Auth
 | Method | Endpoint        | Description         |
 |--------|-----------------|---------------------|
@@ -177,6 +207,43 @@ requires the authentication cookie.
 | `typing`            | client → server  | User started typing            |
 | `stopTyping`        | client → server  | User stopped typing            |
 | `chatOpened`        | client → server  | Mark messages as read          |
+
+## Tests
+
+An end-to-end smoke test boots the server and drives the main flows —
+signup, login, friend requests, messaging, editing — together with the
+authorization and validation rules around them.
+
+```bash
+npm test
+```
+
+It needs a reachable `MONGO_URI`, and it uses Node's built-in fetch, so no
+test framework is required.
+
+## Continuous Integration
+
+Every push and pull request to `main` or `master` runs three jobs:
+
+| Job              | What it checks                                        |
+|------------------|-------------------------------------------------------|
+| `lint-and-build` | Frontend lints cleanly and builds                      |
+| `api-test`       | Smoke test passes against a MongoDB service container  |
+| `docker`         | Image builds, starts and serves the health endpoint    |
+
+## Deployment
+
+The production image serves the built frontend and the API from a single
+port, so it can run anywhere that accepts a container.
+
+```bash
+docker build -t mern-chatapp .
+docker run -d -p 5000:5000   -e NODE_ENV=production   -e MONGO_URI="<your connection string>"   -e JWT_SECRET="<your secret>"   mern-chatapp
+```
+
+Behind a reverse proxy, terminate TLS there and forward to port 5000.
+`NODE_ENV=production` also turns on the `Secure` cookie flag, which
+requires the app to be served over HTTPS.
 
 ## Notes
 
