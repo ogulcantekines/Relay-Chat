@@ -9,7 +9,10 @@
     "client": "npm --prefix frontend run dev",
     "build": "npm --prefix frontend run build",
     "lint": "npm --prefix frontend run lint",
-    "install:all": "npm install && cd frontend && npm install"
+    "install:all": "npm install && cd frontend && npm install",
+    "test": "node scripts/smoke-test.js",
+    "docker:up": "docker compose up --build -d",
+    "docker:down": "docker compose down"
   },
   "type": "module",
   "keywords": [],
