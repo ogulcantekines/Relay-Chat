@@ -23,6 +23,14 @@ const friendRequestSchema = new mongoose.Schema({
     }
 }, { timestamps: true }) // timestamps:true ile createdAt ve updatedAt alanları otomatik eklenir
 
+// Gelen/giden istek listeleri status ile filtreleniyor.
+// Bilinçli olarak unique index kullanılmıyor: mevcut veritabanlarında aynı
+// çift için birden fazla kayıt bulunabilir ve unique index sessizce
+// oluşmayıp sorguları indexsiz bırakırdı. Mükerrerlik controller'da
+// deleteMany/findOne ile zaten engelleniyor.
+friendRequestSchema.index({ receiverId: 1, status: 1 });
+friendRequestSchema.index({ senderId: 1, status: 1 });
+
 const FriendRequest = mongoose.model("FriendRequest", friendRequestSchema);
 // mongoose.model("FriendRequest", ...) → MongoDB'de "friendrequests" koleksiyonu oluşturur (otomatik küçük harf + çoğul)
 export default FriendRequest;

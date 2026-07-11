@@ -20,6 +20,11 @@ const conversationSchema = new mongoose.Schema({
     //createdAt and updatedAt fields
 }, { timestamps: true });
 
+// participants üzerinde $all sorgusu her mesaj gönderiminde ve sohbet
+// açılışında çalışıyor; index olmadan koleksiyon baştan sona taranıyordu.
+conversationSchema.index({ participants: 1 });
+conversationSchema.index({ updatedAt: -1 });
+
 const Conversation = mongoose.model("Conversation", conversationSchema); //conversations collection
 export default Conversation;
 
