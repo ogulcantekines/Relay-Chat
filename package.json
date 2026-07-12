@@ -23,6 +23,7 @@
   "description": "Real-time chat application built with the MERN stack and Socket.IO",
   "dependencies": {
     "bcryptjs": "^3.0.2",
+    "compression": "^1.8.2",
     "cookie-parser": "^1.4.7",
     "dotenv": "^17.2.2",
     "express": "^5.1.0",

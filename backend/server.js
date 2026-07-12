@@ -5,6 +5,7 @@ import { fileURLToPath } from "url";
 import express from "express";
 import cookieParser from "cookie-parser";
 import rateLimit from "express-rate-limit";
+import compression from "compression";
 import connectToMongoDB from "./db/connectToMongoDB.js";
 import authRoutes from "./routes/auth.route.js";
 import messageRoutes from "./routes/message.route.js";
@@ -24,6 +25,9 @@ if (!process.env.JWT_SECRET) {
 
 // Reverse proxy (nginx, Docker, PaaS) arkasında doğru istemci IP'si için
 app.set("trust proxy", 1);
+
+// Yanıtları gzip ile sıkıştır: derlenmiş JS paketi 351 KB'tan ~108 KB'a iner.
+app.use(compression());
 
 app.use(express.json()); // JSON formatındaki istek gövdelerini işlemek için
 app.use(express.urlencoded({ extended: true })); // URL-encoded verileri işlemek için
@@ -60,7 +64,17 @@ app.use("/api/conversations", conversationRoutes);
 // Frontend tüm istekleri /api ile göreli attığı için ek CORS ayarı gerekmez.
 if (process.env.NODE_ENV === "production") {
     const clientDist = path.join(__dirname, "..", "frontend", "dist");
-    app.use(express.static(clientDist));
+
+    // Derlenmiş dosya adları içerik hash'i taşıdığı için (index-C-zoC6mx.js)
+    // uzun süre önbelleğe alınabilir; index.html ise her zaman tazelenmeli.
+    app.use(express.static(clientDist, {
+        maxAge: "1y",
+        setHeaders: (res, filePath) => {
+            if (filePath.endsWith("index.html")) {
+                res.setHeader("Cache-Control", "no-cache");
+            }
+        }
+    }));
 
     // API dışındaki tüm yollar SPA'ya düşer (client-side routing)
     app.get(/^\/(?!api\/).*/, (req, res) => {
