@@ -8,10 +8,12 @@ import useListenMessagesRead from "../../hooks/socket/useListenMessagesRead";
 import useClearConversation from "../../hooks/messages/useClearConversation";
 import useListenEditedMessages from "../../hooks/socket/useListenEditedMessages";
 import useListenDeletedMessages from "../../hooks/socket/useListenDeletedMessages";
+import useListenReactions from "../../hooks/socket/useListenReactions";
+import useUnread from "../../zustand/useUnread";
 import useAuth from "../../zustand/useAuth";
 import useRespondToMessageRequests from "../../hooks/friends/useRespondToMessageRequests";
 import { useEffect, useState } from "react";
-import { IoClose } from "react-icons/io5";
+import { IoClose, IoSearch, IoArrowBack } from "react-icons/io5";
 import useFriendStore from "../../zustand/useFriend";
 import useSendFriendRequest from "../../hooks/friends/useSendFriendRequest";
 import useRespondToFriendRequests from "../../hooks/friends/useRespondToFriendRequests";
@@ -25,8 +27,9 @@ import useRespondToFriendRequests from "../../hooks/friends/useRespondToFriendRe
 
 const MessageContainer = () => {
 
-    const { selectedConversation, conversations } = useConversation();
+    const { selectedConversation, setSelectedConversation, conversations } = useConversation();
     const { onlineUsers, socket } = useSocket();
+    const clearUnread = useUnread((s) => s.clear);
     const { isTyping } = useListenTyping();
     const { clearConversation, loading } = useClearConversation();
 
@@ -42,6 +45,8 @@ const MessageContainer = () => {
 
     // ═══════════ ARKADAŞLIK DURUMU BANNER LOGIC ═══════════
     const [isBannerDismissed, setIsBannerDismissed] = useState(false);
+    const [searchTerm, setSearchTerm] = useState("");   // sohbet içi mesaj arama
+    const [showSearch, setShowSearch] = useState(false);
     const { friends, incomingFriendRequests, sentFriendRequests, addSentFriendRequest } = useFriendStore();
     const { sendFriendRequest, loading: sendFriendLoading } = useSendFriendRequest();
     const { respondToRequest, loading: respondFriendLoading } = useRespondToFriendRequests();
@@ -49,6 +54,8 @@ const MessageContainer = () => {
     // Sohbet değişince banner görünürlüğünü sıfırla (her kişi için yeni şans)
     useEffect(() => {
         setIsBannerDismissed(false);
+        setSearchTerm("");      // sohbet değişince arama sıfırlansın
+        setShowSearch(false);
     }, [selectedConversation?._id]);
 
     // Seçili kişi arkadaş mı? → friends dizisinde ID'si var mı kontrol et
@@ -70,6 +77,7 @@ const MessageContainer = () => {
     useListenMessagesRead(); // Okundu bildirimlerini dinle
     useListenEditedMessages(); // Düzenlenen mesajları dinle
     useListenDeletedMessages(); // Silinen mesajları dinle
+    useListenReactions(); // Emoji tepkilerini dinle
 
     // ═══════════ CHAT AÇILMA BİLDİRİMİ ═══════════
     // Backend'e "bu sohbeti açtım" bilgisi gönder (okundu bilgisi için)
@@ -83,7 +91,9 @@ const MessageContainer = () => {
                 otherUserId: selectedConversation._id
             });
         }
-    }, [selectedConversation, socket, conversations]);
+        // Sohbet açıldığında o kişiye ait okunmamış rozetini sıfırla
+        if (selectedConversation) clearUnread(selectedConversation._id);
+    }, [selectedConversation, socket, conversations, clearUnread]);
 
     // Sohbeti temizle butonuna tıklanınca
     const handleClearChat = () => {
@@ -100,48 +110,93 @@ const MessageContainer = () => {
             {noChatSelected ? <NoChatSelected /> : (<> {/* Sohbet seçilmemişse NoChatSelected, seçilmişse mesaj alanı */}
 
                 {/* ═══════════ HEADER ═══════════ */}
-                <div className="bg-slate-500 px-4 py-2 mb-2 flex-shrink-0 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                        <span className="label-text">To:</span>
-                        <span className="text-gray-900 font-bold">{selectedConversation.fullName}</span>
+                <div
+                    className='flex items-center gap-3 px-4 py-2.5 flex-shrink-0'
+                    style={{ borderBottom: '1px solid var(--border-subtle)', background: 'var(--bg-panel)' }}
+                >
+                    {/* Dar ekranda listeye dön */}
+                    <button
+                        onClick={() => setSelectedConversation(null)}
+                        className='md:hidden w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0'
+                        style={{ background: 'var(--bg-elevated)', color: 'var(--text-secondary)' }}
+                        title='Geri'
+                    >
+                        <IoArrowBack />
+                    </button>
 
-                        {/* Yazıyor göstergesi → 3 animasyonlu mavi nokta */}
-                        {isTyping && (
-                            <div className="flex items-center gap-1">
-                                <div className="flex gap-1">
-                                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"></div>
-                                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                                </div>
-                                <span className="text-blue-400 text-xs font-medium">typing...</span>
-                            </div>
-                        )}
-
-                        {/* Online durumu göstergesi */}
-                        {!isTyping && isOnline && (
-                            <div className="flex items-center gap-1">
-                                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                                <span className="text-green-600 text-xs font-medium">Online</span>
-                            </div>
-                        )}
-
-                        {/* Offline durumu */}
-                        {!isTyping && !isOnline && (
-                            <span className="text-red-500 text-sm">Offline</span>
+                    <div className='relative flex-shrink-0'>
+                        <img
+                            src={selectedConversation.profilePic}
+                            alt=''
+                            className='w-10 h-10 rounded-full object-cover'
+                            style={{ border: '1px solid var(--border-subtle)' }}
+                        />
+                        {isOnline && (
+                            <span
+                                className='absolute bottom-0 right-0 w-3 h-3 rounded-full'
+                                style={{ background: 'var(--online)', border: '2px solid var(--bg-panel)' }}
+                            />
                         )}
                     </div>
 
-                    {/* Sohbeti temizle butonu */}
+                    <div className='min-w-0 flex-1'>
+                        <div className='font-semibold text-sm truncate' style={{ color: 'var(--text-primary)' }}>
+                            {selectedConversation.fullName}
+                        </div>
+                        <div className='text-xs flex items-center gap-1.5' style={{ color: 'var(--text-muted)' }}>
+                            {isTyping ? (
+                                <span className='flex items-center gap-1' style={{ color: 'var(--accent-hover)' }}>
+                                    <span className='flex gap-0.5'>
+                                        <span className='w-1 h-1 rounded-full dot-blink' style={{ background: 'currentColor' }} />
+                                        <span className='w-1 h-1 rounded-full dot-blink' style={{ background: 'currentColor', animationDelay: '0.2s' }} />
+                                        <span className='w-1 h-1 rounded-full dot-blink' style={{ background: 'currentColor', animationDelay: '0.4s' }} />
+                                    </span>
+                                    yazıyor
+                                </span>
+                            ) : isOnline ? (
+                                <span style={{ color: 'var(--online)' }}>çevrimiçi</span>
+                            ) : (
+                                <span>çevrimdışı</span>
+                            )}
+                        </div>
+                    </div>
+
+                    <button
+                        onClick={() => setShowSearch(v => !v)}
+                        className='w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0'
+                        style={{
+                            background: showSearch ? 'var(--accent-soft)' : 'var(--bg-elevated)',
+                            color: showSearch ? 'var(--accent-hover)' : 'var(--text-secondary)'
+                        }}
+                        title='Mesajlarda ara'
+                    >
+                        <IoSearch />
+                    </button>
+
                     <button
                         onClick={handleClearChat}
                         disabled={loading}
-                        className="btn btn-sm btn-error btn-outline"
-                        title="Clear chat"
+                        className='w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 text-sm'
+                        style={{ background: 'var(--bg-elevated)', color: 'var(--text-secondary)' }}
+                        title='Sohbeti temizle'
                     >
-                        {loading ? "..." : "🗑️ Clear Chat"}
+                        {loading ? '...' : '🗑️'}
                     </button>
-
                 </div>
+
+                {/* Sohbet içi arama çubuğu */}
+                {showSearch && (
+                    <div className='px-4 py-2 flex-shrink-0' style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                        <input
+                            autoFocus
+                            type='text'
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            placeholder='Bu sohbette ara...'
+                            className='field text-sm'
+                        />
+                    </div>
+                )}
 
                 {/* ═══════════ MESAJ İSTEĞİ BANNER'I ═══════════ */}
                 {/* Gösterilme koşulları:
@@ -243,7 +298,7 @@ const MessageContainer = () => {
 
                 {/* ═══════════ MESAJLAR ═══════════ */}
                 <div className="flex-1 overflow-hidden">
-                    <Messages />
+                    <Messages searchTerm={searchTerm} />
                 </div>
 
                 {/* ═══════════ MESAJ GİRİŞ ALANI ═══════════ */}
@@ -258,14 +313,23 @@ export default MessageContainer;
 
 // Hiçbir sohbet seçilmediğinde gösterilecek bileşen
 const NoChatSelected = () => {
+    const { authUser } = useAuth();
     return (
-        <div className='flex items-center justify-center w-full h-full'>
-            <div className='px-4 text-center sm:text-lg md:text-xl text-gray-200 font-semibold flex flex-col items-center gap-2'>
-                <p>Welcome 👋 ❄</p>
-                <p>Select a chat to start messaging</p>
-                <TiMessages className='text-3xl md:text-6xl text-center' />
+        <div className='flex flex-col items-center justify-center w-full h-full gap-3 px-6 text-center'>
+            <div
+                className='w-16 h-16 rounded-2xl flex items-center justify-center text-3xl'
+                style={{ background: 'var(--accent-soft)' }}
+            >
+                <TiMessages style={{ color: 'var(--accent-hover)' }} />
             </div>
+            <h2 className='text-lg font-semibold' style={{ color: 'var(--text-primary)' }}>
+                Hoş geldin, {authUser?.fullName?.split(' ')[0] || 'yolcu'} 👋
+            </h2>
+            <p className='text-sm max-w-xs' style={{ color: 'var(--text-secondary)' }}>
+                Soldaki listeden bir sohbet seç ya da arkadaş kodunu paylaşarak yeni biriyle konuşmaya başla.
+            </p>
         </div>
     );
 };
+
 export { NoChatSelected };

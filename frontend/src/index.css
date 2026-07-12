@@ -2,33 +2,203 @@
 @tailwind components;
 @tailwind utilities;
 
-body{
-  background: linear-gradient(rgba(0,0,0,0.2), rgba(0,0,0,0.2)), url('/bg.png');
-  background-repeat :no-repeat;
-  background-size: cover;
-  background-attachment: fixed;
-  background-position: center;
+/* ─────────────────────────────────────────────────────────────
+   Tasarım belirteçleri
+   Renkler tek yerde tanımlı; bileşenler bu değişkenleri kullanır.
+   ───────────────────────────────────────────────────────────── */
+:root {
+  --bg-base: #0b0f1a;
+  --bg-panel: #131826;
+  --bg-elevated: #1a2032;
+  --bg-hover: #212942;
+  --border-subtle: #252d42;
+
+  --text-primary: #e8ecf5;
+  --text-secondary: #9aa4bf;
+  --text-muted: #6b7694;
+
+  --accent: #6366f1;
+  --accent-hover: #818cf8;
+  --accent-soft: rgba(99, 102, 241, 0.14);
+
+  --bubble-out: linear-gradient(135deg, #6366f1 0%, #7c3aed 100%);
+  --bubble-in: #232b3f;
+
+  --online: #22c55e;
+  --danger: #ef4444;
 }
 
-/* Disable text cursor everywhere except inputs and textareas */
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background-color: var(--bg-base);
+  color: var(--text-primary);
+  font-family: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    Roboto, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+
+/* Sabit, hafif hareketli arka plan: sayfa kaydırırken ışıltılar yerinde kalır */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(60rem 60rem at 12% 18%, rgba(99, 102, 241, 0.16), transparent 60%),
+    radial-gradient(48rem 48rem at 88% 78%, rgba(124, 58, 237, 0.14), transparent 60%),
+    radial-gradient(40rem 40rem at 68% 12%, rgba(14, 165, 233, 0.10), transparent 60%);
+}
+
+/* ── Kaydırma çubuğu ── */
+.scroll-slim::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.scroll-slim::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scroll-slim::-webkit-scrollbar-thumb {
+  background: var(--border-subtle);
+  border-radius: 999px;
+}
+.scroll-slim::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+.scroll-slim {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-subtle) transparent;
+}
+
+/* ── Yüzeyler ── */
+.surface {
+  background-color: var(--bg-panel);
+  border: 1px solid var(--border-subtle);
+}
+
+.surface-glass {
+  background: rgba(19, 24, 38, 0.72);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+/* ── Form alanları ── */
+.field {
+  width: 100%;
+  background-color: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: 0.65rem;
+  padding: 0.65rem 0.9rem;
+  color: var(--text-primary);
+  font-size: 0.925rem;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.field::placeholder {
+  color: var(--text-muted);
+}
+.field:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+/* ── Düğmeler ── */
+.btn-primary-grad {
+  background: var(--bubble-out);
+  color: #fff;
+  border: none;
+  border-radius: 0.65rem;
+  padding: 0.65rem 1rem;
+  font-weight: 600;
+  font-size: 0.925rem;
+  cursor: pointer;
+  transition: filter 0.15s ease, transform 0.08s ease, opacity 0.15s ease;
+}
+.btn-primary-grad:hover:not(:disabled) {
+  filter: brightness(1.12);
+}
+.btn-primary-grad:active:not(:disabled) {
+  transform: translateY(1px);
+}
+.btn-primary-grad:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* ── Mesaj balonları ── */
+.bubble {
+  max-width: min(68ch, 78%);
+  padding: 0.55rem 0.85rem;
+  border-radius: 1.05rem;
+  font-size: 0.925rem;
+  line-height: 1.5;
+  word-break: break-word;
+  white-space: pre-wrap;
+  position: relative;
+}
+.bubble-out {
+  background: var(--bubble-out);
+  color: #fff;
+  border-bottom-right-radius: 0.3rem;
+}
+.bubble-in {
+  background: var(--bubble-in);
+  color: var(--text-primary);
+  border-bottom-left-radius: 0.3rem;
+}
+
+/* ── Animasyonlar ── */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.animate-rise {
+  animation: rise 0.22s ease-out both;
+}
+
+@keyframes blink {
+  0%, 80%, 100% { opacity: 0.25; transform: translateY(0); }
+  40% { opacity: 1; transform: translateY(-3px); }
+}
+.dot-blink {
+  animation: blink 1.3s infinite;
+}
+
+/* Hareket azaltma tercihini olan kullanıcılar için animasyonları kapat */
+@media (prefers-reduced-motion: reduce) {
+  .animate-rise,
+  .dot-blink {
+    animation: none;
+  }
+}
+
+/* Metin imleci yalnızca yazılabilir alanlarda görünsün */
 * {
   caret-color: transparent;
 }
-
-input, textarea {
+input,
+textarea,
+[contenteditable] {
   caret-color: auto;
 }
 
-/* Custom scrollbar for sidebar */
-.sidebar-scrollbar::-webkit-scrollbar {
-  width: 6px;
-  background: transparent;
-}
-.sidebar-scrollbar::-webkit-scrollbar-thumb {
-  background: #374151; /* dark gray */
-  border-radius: 8px;
-}
-.sidebar-scrollbar {
-  scrollbar-width: thin;
-  scrollbar-color: #374151 transparent;
+/* Arama sonucu vurgusu */
+mark.hit {
+  background: rgba(250, 204, 21, 0.32);
+  color: inherit;
+  border-radius: 3px;
+  padding: 0 2px;
 }

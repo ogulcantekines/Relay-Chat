@@ -4,9 +4,12 @@ import useSocket from "../../zustand/useSocket";
 import useConversation from "../../zustand/useConversation";
 import { IoSend } from "react-icons/io5";
 
+const QUICK_EMOJIS = ["😀", "😂", "🥰", "😎", "🤔", "👍", "🙏", "🎉", "❤️", "🔥", "✅", "😢"];
+
 const MessageInput = () => {
 
     const [message, setMessage] = useState("");
+    const [showEmoji, setShowEmoji] = useState(false);
     const { loading, sendMessage } = useSendMessage();// useSendMessage hook'undan loading durumu ve sendMessage fonksiyonunu al
     const { socket } = useSocket();// Socket bağlantısını al (typing status göndermek için)
     const { selectedConversation } = useConversation();// Seçili conversation'ı al (kime mesaj gönderiyoruz?)
@@ -25,6 +28,7 @@ const MessageInput = () => {
         }
         await sendMessage(message); // Mesajı backend'e gönder (await ile bekle)
         setMessage(""); // Input'u temizle
+        if (inputRef.current) inputRef.current.style.height = 'auto'; // alanı tek satıra döndür
 
         // Mesaj gönderdikten sonra input'a tekrar focus yap (kullanıcı yazıya devam edebilsin)
         setTimeout(() => {
@@ -57,37 +61,73 @@ const MessageInput = () => {
     // eğer clearTimeout kullanmasaydık her tuş için ayrı ayrı stopTyping emit edilecekti (spam gibi olurdu)
 
     return (
-        <form className="px-4 my-3" onSubmit={handleSubmit}>
-            <div className="w-full relative">
-                {/* Mesaj input'u */}
-                <input
-                    ref={inputRef} // Referans ekle. bu içinde bulunduğu input elementine erişmemizi sağlar
-                    // inputRef = { current: HTMLInputElement objesi } ← Real DOM objesi burada! bu input real dom a dönüşür ve inputRef e atanır.
-                    //Ref de zaten kutu gibi düşün yani değer tutar. o anlık değerine erişmek için inputRef.current deriz. ve bu artık real dom objesi olur
-                    // inputRef.current.focus() → Bu şekilde DOM elementinin focus() metodunu çağırabiliriz.
-                    // Mesaj gönderildikten sonra input'a tekrar focus yapmak için kullanacağız.
-                    type="text"
-                    placeholder="Type a message..."
-                    className="border text-sm rounded-lg block w-full p-2.5 pr-12 bg-gray-700 border-gray-600 text-white"
-                    value={message} // State'ten değer al
-                    onChange={handleTyping} // Her karakterde typing sinyali gönder
-                    disabled={loading} // Mesaj gönderilirken input'u devre dışı bırak
-                />
-
-                {/* Send butonu (input'un sağ tarafında, absolute position) */}
+        <form
+            className='flex items-end gap-2 px-4 py-3'
+            style={{ borderTop: '1px solid var(--border-subtle)' }}
+            onSubmit={handleSubmit}
+        >
+            {/* Hızlı emoji ekleme */}
+            <div className='relative'>
                 <button
-                    type="submit"
-                    className="absolute inset-y-0 end-0 flex items-center pe-3"
-                    disabled={loading} // Mesaj gönderilirken butonu devre dışı bırak
+                    type='button'
+                    onClick={() => setShowEmoji(v => !v)}
+                    className='w-10 h-10 rounded-xl flex items-center justify-center text-lg transition-colors'
+                    style={{ background: 'var(--bg-elevated)', color: 'var(--text-secondary)' }}
+                    title='Emoji ekle'
                 >
-                    {/* Loading durumundaysa spinner, değilse send ikonu göster */}
-                    {loading ? (
-                        <span className="loading loading-spinner"></span>
-                    ) : (
-                        <IoSend className="text-2xl text-gray-400 hover:text-gray-200" />
-                    )}
+                    🙂
                 </button>
+
+                {showEmoji && (
+                    <div
+                        className='absolute bottom-full left-0 mb-2 z-30 grid grid-cols-6 gap-1 p-2 rounded-xl shadow-xl'
+                        style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)', width: '15rem' }}
+                    >
+                        {QUICK_EMOJIS.map(e => (
+                            <button
+                                key={e}
+                                type='button'
+                                onClick={() => {
+                                    setMessage(m => m + e);
+                                    setShowEmoji(false);
+                                    inputRef.current?.focus();
+                                }}
+                                className='w-9 h-9 rounded-lg text-lg hover:scale-110 transition-transform'
+                            >
+                                {e}
+                            </button>
+                        ))}
+                    </div>
+                )}
             </div>
+
+            {/* Mesaj alanı: Enter gönderir, Shift+Enter alt satıra geçer */}
+            <textarea
+                ref={inputRef}
+                rows={1}
+                placeholder='Bir mesaj yaz...'
+                className='field flex-1 resize-none max-h-32 scroll-slim'
+                value={message}
+                onChange={handleTyping}
+                onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSubmit(e);
+                    }
+                }}
+                disabled={loading}
+            />
+
+            <button
+                type='submit'
+                className='btn-primary-grad w-10 h-10 flex items-center justify-center p-0 flex-shrink-0'
+                disabled={loading || !message.trim()}
+                title='Gönder'
+            >
+                {loading
+                    ? <span className='w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin' />
+                    : <IoSend className='text-lg' />}
+            </button>
         </form>
     );
 };

@@ -1,4 +1,3 @@
-import SearchInput from './SearchInput';
 import Conversations from './Conversations';
 import LogoutButton from './LogoutButton';
 import useSocket from '../../zustand/useSocket';
@@ -7,6 +6,7 @@ import { useState } from 'react';
 import Friends from './views/Friends';
 import Requests from './Requests';
 import { FaUserFriends } from 'react-icons/fa';
+import { IoSearch } from 'react-icons/io5';
 import useFriendStore from '../../zustand/useFriend';
 import useGetMessageRequests from '../../hooks/friends/useGetMessageRequests';
 import AddFriend from './views/AddFriend';
@@ -32,6 +32,7 @@ const Sidebar = () => {
     const [activeTab, setActiveTab] = useState("conversations"); // "conversations" veya "requests"
     const [view, setView] = useState("main"); // Aktif görünüm: "main", "addFriend", "friends"
     const [friendsInitialTab, setFriendsInitialTab] = useState("all"); // Friends sayfası açılınca hangi sekme?
+    const [filter, setFilter] = useState(""); // Sohbet listesi filtresi
 
     const friends = useFriendStore((state) => state.friends);
     const onlineFriends = friends.filter(user => onlineUsers.includes(user._id));
@@ -80,90 +81,93 @@ const Sidebar = () => {
 
     // ═══════════ ANA SIDEBAR GÖRÜNÜMÜ ═══════════
     return (
-        <div className="h-full flex flex-col">
+        <div className='h-full flex flex-col' style={{ background: 'var(--bg-panel)' }}>
 
             {/* Kullanıcı bilgileri + Arkadaş ekle butonu + Bildirim dropdown */}
             <UserInfo
                 onAddFriendClick={() => setView("addFriend")}
                 onNotificationClick={handleNotificationClick}
             />
-            <SearchInput /> {/* Sohbet arama çubuğu */}
 
-            {/* Online arkadaş sayısı göstergesi */}
-            <div className="px-3 py-2">
-                <div className="flex items-center gap-2 text-sm text-gray-400">
-                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                    <span>{onlineFriends.length} online</span>
+            {/* Sohbet filtreleme kutusu */}
+            <div className='px-3 pt-2 pb-1'>
+                <div className='relative'>
+                    <IoSearch
+                        className='absolute left-3 top-1/2 -translate-y-1/2 text-sm'
+                        style={{ color: 'var(--text-muted)' }}
+                    />
+                    <input
+                        type='text'
+                        value={filter}
+                        onChange={(e) => setFilter(e.target.value)}
+                        placeholder='Sohbetlerde ara...'
+                        className='field text-sm pl-9 py-2'
+                    />
                 </div>
             </div>
 
             {/* ═══════════ SEKMELER ═══════════ */}
-            <div className="px-4 mb-2">
-                <div className="flex items-center gap-3">
-                    {/* Sol: Chats ve Requests sekmeleri */}
-                    <div className="inline-flex gap-4 border-b border-gray-700">
-                        <button
-                            onClick={() => setActiveTab("conversations")}
-                            className={`py-3 px-2 text-sm font-medium transition-colors duration-200 relative whitespace-nowrap ${activeTab === "conversations"
-                                ? "text-sky-400"
-                                : "text-white hover:text-gray-400"
-                                }`}
-                        >
-                            Chats
-                            {/* Aktif sekme altı çizgi göstergesi */}
-                            {activeTab === "conversations" && (
-                                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-sky-400 rounded-t-full" />
-                            )}
-                        </button>
-                        <button
-                            onClick={() => setActiveTab("requests")}
-                            className={`py-3 px-2 text-sm font-medium transition-colors duration-200 relative whitespace-nowrap ${activeTab === "requests"
-                                ? "text-sky-400"
-                                : "text-white hover:text-gray-400"
-                                }`}
-                        >
-                            <span className="flex items-center gap-2">
-                                Requests
-                                {/* Mesaj istekleri badge'i → bekleyen istek varsa sayıyı göster */}
-                                {messageRequests.length > 0 && (
-                                    <span className="">({messageRequests.length})</span>
-                                )}
-                            </span>
+            <div className='flex items-center gap-1 px-3 pt-1' style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                <button
+                    onClick={() => setActiveTab("conversations")}
+                    className='relative py-2.5 px-3 text-sm font-medium transition-colors'
+                    style={{ color: activeTab === "conversations" ? 'var(--accent-hover)' : 'var(--text-secondary)' }}
+                >
+                    Sohbetler
+                    {activeTab === "conversations" && (
+                        <span className='absolute bottom-0 left-0 right-0 h-0.5 rounded-t-full' style={{ background: 'var(--accent)' }} />
+                    )}
+                </button>
 
-                            {activeTab === "requests" && (
-                                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-sky-400 rounded-t-full" />
-                            )}
-                        </button>
-                    </div>
+                <button
+                    onClick={() => setActiveTab("requests")}
+                    className='relative py-2.5 px-3 text-sm font-medium transition-colors flex items-center gap-1.5'
+                    style={{ color: activeTab === "requests" ? 'var(--accent-hover)' : 'var(--text-secondary)' }}
+                >
+                    İstekler
+                    {messageRequests.length > 0 && (
+                        <span
+                            className='min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-semibold flex items-center justify-center'
+                            style={{ background: 'var(--accent)', color: '#fff' }}
+                        >
+                            {messageRequests.length}
+                        </span>
+                    )}
+                    {activeTab === "requests" && (
+                        <span className='absolute bottom-0 left-0 right-0 h-0.5 rounded-t-full' style={{ background: 'var(--accent)' }} />
+                    )}
+                </button>
 
-                    {/* Sağ: Friends ikonu → Friends view'ına geç */}
-                    <button
-                        onClick={() => setView("friends")}
-                        className={`p-2 rounded-lg transition-colors duration-200 ml-auto ${view === "friends"
-                            ? "bg-sky-700 text-white"
-                            : "bg-sky-500 text-white hover:bg-sky-600"
-                            }`}
-                        title="Friends"
-                    >
-                        <FaUserFriends className="text-lg" />
-                    </button>
-                </div>
+                <button
+                    onClick={() => setView("friends")}
+                    className='ml-auto mb-1 w-8 h-8 rounded-lg flex items-center justify-center transition-colors'
+                    style={{ background: 'var(--bg-elevated)', color: 'var(--text-secondary)' }}
+                    title='Arkadaşlar'
+                >
+                    <FaUserFriends />
+                </button>
+            </div>
+
+            {/* Çevrimiçi arkadaş sayısı */}
+            <div className='flex items-center gap-2 px-4 py-1.5 text-xs' style={{ color: 'var(--text-muted)' }}>
+                <span className='w-1.5 h-1.5 rounded-full' style={{ background: 'var(--online)' }} />
+                <span>{onlineFriends.length} kişi çevrimiçi</span>
             </div>
 
             {/* ═══════════ SEKME İÇERİĞİ ═══════════ */}
-            {/* className ile hidden/göster kontrolü yapılıyor (mount/unmount yerine gizle/göster)
-                Bu sayede Conversations bileşeni her sekme değişiminde yeniden mount olmaz, state korunur */}
-            <div className="flex-1 overflow-hidden">
-                <div className={activeTab === "conversations" ? "h-full" : "hidden"}>
-                    <Conversations />
+            {/* hidden ile gizlenir: bileşen unmount olmadığı için state korunur */}
+            <div className='flex-1 overflow-hidden'>
+                <div className={activeTab === "conversations" ? "h-full overflow-hidden flex flex-col" : "hidden"}>
+                    <Conversations filter={filter} />
                 </div>
-                <div className={activeTab === "requests" ? "h-full" : "hidden"}>
+                <div className={activeTab === "requests" ? "h-full overflow-y-auto scroll-slim" : "hidden"}>
                     <Requests />
                 </div>
             </div>
 
-            <div className='divider px-3'></div>
-            <LogoutButton /> {/* Çıkış butonu */}
+            <div style={{ borderTop: '1px solid var(--border-subtle)' }}>
+                <LogoutButton />
+            </div>
         </div>
     );
 }
