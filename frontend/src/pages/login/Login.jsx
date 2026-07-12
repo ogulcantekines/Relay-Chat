@@ -66,7 +66,7 @@ const Login = () => {
 								type={showPassword ? 'text' : 'password'}
 								autoComplete='current-password'
 								placeholder='••••••••'
-								className='field pr-11'
+								className='field field-action'
 								name='password'
 								value={inputs.password}
 								onChange={(e) => setInputs({ ...inputs, password: e.target.value })}

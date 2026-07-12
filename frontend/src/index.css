@@ -109,6 +109,30 @@ body::before {
   box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
+/* Solunda ikon bulunan alanlar.
+   .field'in padding kısaltması Tailwind'in pl-* sınıfını ezdiği için
+   ikon payı burada, aynı kuralın içinde veriliyor. */
+.field-icon {
+  padding-left: 2.5rem;
+}
+
+/* Sağında düğme bulunan alanlar (ör. parolayı göster) */
+.field-action {
+  padding-right: 2.75rem;
+}
+
+/* İkonun kendisi: dikeyde ortalı ve tıklamayı input'a geçiren */
+.field-icon-glyph {
+  position: absolute;
+  left: 0.85rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  pointer-events: none;
+  font-size: 0.95rem;
+  line-height: 1;
+}
+
 /* ── Düğmeler ── */
 .btn-primary-grad {
   background: var(--bubble-out);

@@ -133,8 +133,12 @@ const Message = ({ message, searchTerm = "", showAvatar = true }) => {
                     {/* Eylem çubuğu: yalnızca imleç mesajın üstündeyken görünür */}
                     {!message.isDeleted && (
                         <div
-                            className={`absolute top-1/2 -translate-y-1/2 ${fromMe ? 'right-full mr-1.5' : 'left-full ml-1.5'}
-                                        flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity`}
+                            // Dar ekranda balonun yanında yer yok; butonlar balonun
+                            // üstüne alınır. Geniş ekranda yanda durmaya devam eder.
+                            className={`absolute z-10 flex items-center gap-0.5 opacity-0 group-hover:opacity-100
+                                        focus-within:opacity-100 transition-opacity
+                                        bottom-full mb-1 md:bottom-auto md:top-1/2 md:mb-0 md:-translate-y-1/2
+                                        ${fromMe ? 'right-0 md:right-full md:mr-1.5' : 'left-0 md:left-full md:ml-1.5'}`}
                         >
                             <button
                                 onClick={() => setShowPicker(v => !v)}
@@ -172,7 +176,7 @@ const Message = ({ message, searchTerm = "", showAvatar = true }) => {
                     {showPicker && (
                         <div
                             className={`absolute z-20 bottom-full mb-1.5 ${fromMe ? 'right-0' : 'left-0'}
-                                        flex gap-1 p-1.5 rounded-xl shadow-xl`}
+                                        flex gap-1 p-1.5 rounded-xl shadow-xl max-w-[90vw] flex-wrap`}
                             style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)' }}
                         >
                             {REACTIONS.map(emoji => (
