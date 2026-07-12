@@ -30,6 +30,10 @@ Users register, find each other by username or a short friend code, send friend 
 - Typing indicators
 - Read receipts
 - Message editing and deletion (sender only)
+- Emoji reactions
+- Unread badges per conversation and in the tab title
+- Search within a conversation, with matches highlighted
+- Day separators and grouped consecutive messages
 - Clear conversation history
 - Online / offline presence
 
@@ -191,6 +195,8 @@ requires the authentication cookie.
 | POST   | `/messages/send/:id` | Send a message               |
 | PUT    | `/messages/edit/:id` | Edit your own message        |
 | DELETE | `/messages/:id`      | Delete your own message      |
+| POST   | `/messages/react/:id`| Add or remove a reaction     |
+| GET    | `/messages/unread/counts` | Unread count per sender |
 | DELETE | `/messages/clear/:id`| Clear conversation history   |
 
 ### Conversations
@@ -208,6 +214,7 @@ requires the authentication cookie.
 | `newMessage`        | server → client  | Incoming message               |
 | `messageEdited`     | server → client  | A message was edited           |
 | `messageDeleted`    | server → client  | A message was deleted          |
+| `messageReaction`   | server → client  | A reaction changed             |
 | `messagesRead`      | server → client  | Recipient read your messages   |
 | `userTyping`        | server → client  | Peer is typing                 |
 | `userStoppedTyping` | server → client  | Peer stopped typing            |
@@ -226,10 +233,16 @@ changes — together with the authorization and validation rules around
 them. It currently runs 32 checks.
 
 ```bash
-npm test
+npm test            # HTTP smoke test, 36 checks
+npm run test:realtime   # socket delivery, 8 checks
+npm run test:all        # both
 ```
 
-It needs a reachable `MONGO_URI`, and it uses Node's built-in fetch, so no
+The real-time test connects two actual Socket.IO clients and asserts that
+friend requests, messages, typing, reactions and deletions reach the other
+side — the HTTP test alone cannot show that.
+
+Both need a reachable `MONGO_URI`. They use Node's built-in fetch, so no
 test framework is required.
 
 ## Continuous Integration
@@ -239,7 +252,7 @@ Every push and pull request to `main` or `master` runs three jobs:
 | Job              | What it checks                                        |
 |------------------|-------------------------------------------------------|
 | `lint-and-build` | Frontend lints cleanly and builds                      |
-| `api-test`       | Smoke test passes against a MongoDB service container  |
+| `api-test`       | Smoke and real-time tests pass against a MongoDB container |
 | `docker`         | Image builds, starts and serves the health endpoint    |
 
 A separate security workflow runs CodeQL analysis, `npm audit` on both
