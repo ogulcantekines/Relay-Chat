@@ -245,6 +245,41 @@ async function run() {
         });
         check("login works with the new password", loginNew.status === 200, `got ${loginNew.status}`);
 
+        console.log("\nReactions and counters");
+        const msg2 = await api(`/api/messages/send/${bId}`, {
+            method: "POST",
+            cookie: cookieA,
+            body: { message: "reaction target" }
+        });
+        const target = await msg2.json();
+
+        const react = await api(`/api/messages/react/${target._id}`, {
+            method: "POST",
+            cookie: cookieB,
+            body: { emoji: "\u{1F44D}" }
+        });
+        const reacted = await react.json();
+        check("reaction can be added", react.status === 200 && reacted.reactions?.length === 1, `got ${react.status}`);
+
+        const unreact = await api(`/api/messages/react/${target._id}`, {
+            method: "POST",
+            cookie: cookieB,
+            body: { emoji: "\u{1F44D}" }
+        });
+        const unreacted = await unreact.json();
+        check("same reaction toggles off", unreacted.reactions?.length === 0);
+
+        const badEmoji = await api(`/api/messages/react/${target._id}`, {
+            method: "POST",
+            cookie: cookieB,
+            body: { emoji: "\u{1F4A3}" }
+        });
+        check("unsupported reaction rejected", badEmoji.status === 400, `got ${badEmoji.status}`);
+
+        const counts = await api("/api/messages/unread/counts", { cookie: cookieB });
+        const countBody = await counts.json();
+        check("unread counts are returned per sender", counts.status === 200 && typeof countBody === "object");
+
         const conversations = await api("/api/conversations", { cookie: cookieA });
         const convList = await conversations.json();
         check("conversation was created", Array.isArray(convList) && convList.length >= 1);
