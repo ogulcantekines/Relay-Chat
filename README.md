@@ -247,7 +247,7 @@ test framework is required.
 
 ## Continuous Integration
 
-Every push and pull request to `main` or `master` runs three jobs:
+Every push and pull request to `main` runs three jobs:
 
 | Job              | What it checks                                        |
 |------------------|-------------------------------------------------------|
@@ -256,8 +256,7 @@ Every push and pull request to `main` or `master` runs three jobs:
 | `docker`         | Image builds, starts and serves the health endpoint    |
 
 A separate security workflow runs CodeQL analysis, `npm audit` on both
-workspaces and a gitleaks scan over the full history, on every push and
-weekly on a schedule. Dependabot keeps npm, Docker and Actions versions
+workspaces and a gitleaks scan over the full history, on every push and weekly on a schedule. Dependabot keeps npm, Docker and Actions versions
 up to date.
 
 ## Deployment
@@ -273,6 +272,17 @@ docker run -d -p 5000:5000   -e NODE_ENV=production   -e MONGO_URI="<your connec
 Behind a reverse proxy, terminate TLS there and forward to port 5000.
 `NODE_ENV=production` also turns on the `Secure` cookie flag, which
 requires the app to be served over HTTPS.
+
+## Contributing
+
+`main` stays deployable; changes land through pull requests that CI has to
+pass. Branch naming, commit conventions and the local checks are described
+in [CONTRIBUTING.md](CONTRIBUTING.md).
+
+```bash
+git switch -c feat/your-change
+npm run lint && npm run test:all
+```
 
 ## Notes
 
