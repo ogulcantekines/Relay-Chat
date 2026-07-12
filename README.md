@@ -1,6 +1,7 @@
 # MERN Chat App
 
 [![CI](https://github.com/ogulcantekines/MERN-ChatApp/actions/workflows/ci.yml/badge.svg)](https://github.com/ogulcantekines/MERN-ChatApp/actions/workflows/ci.yml)
+[![Security](https://github.com/ogulcantekines/MERN-ChatApp/actions/workflows/security.yml/badge.svg)](https://github.com/ogulcantekines/MERN-ChatApp/actions/workflows/security.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 Real-time messaging application built with the MERN stack (MongoDB, Express, React, Node.js) and Socket.IO.
@@ -14,6 +15,10 @@ Users register, find each other by username or a short friend code, send friend 
 - JWT stored in an httpOnly cookie
 - Protected API routes via middleware
 
+**Profile**
+- Edit display name and avatar
+- Change password, verified against the current one
+
 **Friends**
 - Search users by username or 4-character friend code
 - Send, accept, reject and cancel friend requests
@@ -24,7 +29,7 @@ Users register, find each other by username or a short friend code, send friend 
 - Real-time delivery over Socket.IO
 - Typing indicators
 - Read receipts
-- Message editing (sender only)
+- Message editing and deletion (sender only)
 - Clear conversation history
 - Online / offline presence
 
@@ -163,6 +168,9 @@ requires the authentication cookie.
 | POST   | `/auth/signup`  | Create an account   |
 | POST   | `/auth/login`   | Log in              |
 | POST   | `/auth/logout`  | Log out             |
+| GET    | `/auth/me`      | Current session user |
+| PUT    | `/auth/profile` | Update name / avatar |
+| PUT    | `/auth/password`| Change password     |
 
 ### Friends
 | Method | Endpoint                  | Description                   |
@@ -182,6 +190,7 @@ requires the authentication cookie.
 | GET    | `/messages/:id`      | Conversation with a user     |
 | POST   | `/messages/send/:id` | Send a message               |
 | PUT    | `/messages/edit/:id` | Edit your own message        |
+| DELETE | `/messages/:id`      | Delete your own message      |
 | DELETE | `/messages/clear/:id`| Clear conversation history   |
 
 ### Conversations
@@ -198,6 +207,7 @@ requires the authentication cookie.
 | `getOnlineUsers`    | server → client  | Current online user IDs        |
 | `newMessage`        | server → client  | Incoming message               |
 | `messageEdited`     | server → client  | A message was edited           |
+| `messageDeleted`    | server → client  | A message was deleted          |
 | `messagesRead`      | server → client  | Recipient read your messages   |
 | `userTyping`        | server → client  | Peer is typing                 |
 | `userStoppedTyping` | server → client  | Peer stopped typing            |
@@ -211,8 +221,9 @@ requires the authentication cookie.
 ## Tests
 
 An end-to-end smoke test boots the server and drives the main flows —
-signup, login, friend requests, messaging, editing — together with the
-authorization and validation rules around them.
+signup, login, friend requests, messaging, editing, deletion and profile
+changes — together with the authorization and validation rules around
+them. It currently runs 32 checks.
 
 ```bash
 npm test
@@ -230,6 +241,11 @@ Every push and pull request to `main` or `master` runs three jobs:
 | `lint-and-build` | Frontend lints cleanly and builds                      |
 | `api-test`       | Smoke test passes against a MongoDB service container  |
 | `docker`         | Image builds, starts and serves the health endpoint    |
+
+A separate security workflow runs CodeQL analysis, `npm audit` on both
+workspaces and a gitleaks scan over the full history, on every push and
+weekly on a schedule. Dependabot keeps npm, Docker and Actions versions
+up to date.
 
 ## Deployment
 
