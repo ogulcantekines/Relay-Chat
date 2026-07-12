@@ -31,6 +31,20 @@ const messageSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
+
+    // Emoji tepkileri: her kullanıcı bir mesaja tek tepki bırakabilir
+    reactions: [{
+        userId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
+            required: true
+        },
+        emoji: {
+            type: String,
+            required: true
+        },
+        _id: false
+    }],
     editedAt:{ // mesaj düzenleme özelliği için eklendi
         type: Date,
         default: null

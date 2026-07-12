@@ -67,7 +67,18 @@ export const sendMessage = async (req, res) => {
         // SOCKET.IO - Real-time mesaj gönderimi - alıcı online ise anında ilet bu dbye kaydedildikten sonra anlık olarak websocket ile gönder
         const receiverSocketId = getReceiverSocketId(receiverId);
         if (receiverSocketId) {
-            io.to(receiverSocketId).emit("newMessage", newMessage);
+            // Gönderenin bilgisi de iletiliyor: alıcıda henüz o sohbet açılmamışsa
+            // arayüz kutucuğu kendiliğinden oluşturabilsin diye.
+            io.to(receiverSocketId).emit("newMessage", {
+                ...newMessage.toObject(),
+                sender: {
+                    _id: sender._id,
+                    fullName: sender.fullName,
+                    username: sender.username,
+                    profilePic: sender.profilePic
+                },
+                conversationStatus: conversation.status
+            });
         }
 
         // Return the saved message as JSON
@@ -262,6 +273,116 @@ export const deleteMessage = async (req, res) => {
 
     } catch (error) {
         console.error("Error deleting message:", error);
+        res.status(500).json({ error: "Internal Server Error" });
+    }
+};
+
+// ═══════════════════════════════════════════════════════════════
+// OKUNMAMIŞ MESAJ SAYILARI
+// Route: GET /api/messages/unread/counts
+// Her gönderen için kaç okunmamış mesaj olduğunu döner:
+//   { "<userId>": 3, "<userId2>": 1 }
+// Kenar çubuğundaki rozetler bu veriyle çiziliyor.
+// ═══════════════════════════════════════════════════════════════
+export const getUnreadCounts = async (req, res) => {
+    try {
+        const userId = req.userId;
+
+        const counts = await Message.aggregate([
+            {
+                $match: {
+                    receiverId: new mongoose.Types.ObjectId(userId),
+                    isRead: false
+                }
+            },
+            {
+                $group: {
+                    _id: "$senderId",
+                    count: { $sum: 1 }
+                }
+            }
+        ]);
+
+        // Diziyi arayüzün doğrudan kullanabileceği nesneye çevir
+        const result = {};
+        for (const row of counts) {
+            result[row._id.toString()] = row.count;
+        }
+
+        res.status(200).json(result);
+    } catch (error) {
+        console.error("Error fetching unread counts:", error);
+        res.status(500).json({ error: "Internal Server Error" });
+    }
+};
+
+// ═══════════════════════════════════════════════════════════════
+// MESAJA EMOJİ TEPKİSİ
+// Route: POST /api/messages/react/:id   body: { emoji }
+// Aynı emoji tekrar gönderilirse tepki kaldırılır (toggle davranışı).
+// Her kullanıcının bir mesajda yalnızca bir tepkisi olur.
+// ═══════════════════════════════════════════════════════════════
+const ALLOWED_REACTIONS = ["👍", "❤️", "😂", "😮", "😢", "🙏"];
+
+export const reactToMessage = async (req, res) => {
+    try {
+        const { id: messageId } = req.params;
+        const { emoji } = req.body;
+        const userId = req.userId;
+
+        if (!mongoose.Types.ObjectId.isValid(messageId)) {
+            return res.status(400).json({ error: "Invalid message id" });
+        }
+        if (!ALLOWED_REACTIONS.includes(emoji)) {
+            return res.status(400).json({ error: "Unsupported reaction" });
+        }
+
+        const message = await Message.findById(messageId);
+        if (!message) {
+            return res.status(404).json({ error: "Message not found" });
+        }
+        if (message.isDeleted) {
+            return res.status(400).json({ error: "Cannot react to a deleted message" });
+        }
+
+        // Tepki yalnızca sohbetin taraflarından gelebilir
+        const isParticipant =
+            message.senderId.toString() === userId ||
+            message.receiverId.toString() === userId;
+        if (!isParticipant) {
+            return res.status(403).json({ error: "Forbidden. You are not part of this conversation." });
+        }
+
+        const existing = message.reactions.find(r => r.userId.toString() === userId);
+
+        if (existing && existing.emoji === emoji) {
+            // Aynı emojiye tekrar basıldı -> tepkiyi kaldır
+            message.reactions = message.reactions.filter(r => r.userId.toString() !== userId);
+        } else if (existing) {
+            existing.emoji = emoji; // farklı emoji -> değiştir
+        } else {
+            message.reactions.push({ userId, emoji });
+        }
+
+        await message.save();
+
+        // Karşı tarafa anlık bildir
+        const otherUserId =
+            message.senderId.toString() === userId ? message.receiverId : message.senderId;
+        const otherSocketId = getReceiverSocketId(otherUserId);
+        if (otherSocketId) {
+            io.to(otherSocketId).emit("messageReaction", {
+                messageId: message._id,
+                reactions: message.reactions
+            });
+        }
+
+        res.status(200).json({
+            message: "Reaction updated",
+            reactions: message.reactions
+        });
+    } catch (error) {
+        console.error("Error reacting to message:", error);
         res.status(500).json({ error: "Internal Server Error" });
     }
 };
