@@ -93,7 +93,7 @@ const Sidebar = () => {
             <div className='px-3 pt-2 pb-1'>
                 <div className='relative'>
                     <IoSearch
-                        className='absolute left-3 top-1/2 -translate-y-1/2 text-sm'
+                        className='absolute left-3.5 top-1/2 -translate-y-1/2 text-sm pointer-events-none'
                         style={{ color: 'var(--text-muted)' }}
                     />
                     <input
@@ -101,7 +101,7 @@ const Sidebar = () => {
                         value={filter}
                         onChange={(e) => setFilter(e.target.value)}
                         placeholder='Sohbetlerde ara...'
-                        className='field text-sm pl-9 py-2'
+                        className='field text-sm pl-10 py-2'
                     />
                 </div>
             </div>

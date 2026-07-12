@@ -134,12 +134,18 @@ body::before {
 
 /* ── Mesaj balonları ── */
 .bubble {
-  max-width: min(68ch, 78%);
-  padding: 0.55rem 0.85rem;
+  /* Sabit üst sınır + fit-content: balon genişliğini içeriğinden alır.
+     Yüzdeli max-width, min-w-0 bir flex sütununda çözülecek bir referans
+     bulamayıp sıfıra çöküyor ve metin harf harf alt alta diziliyordu. */
+  max-width: 34rem;
+  width: fit-content;
+  padding: 0.5rem 0.8rem;
   border-radius: 1.05rem;
-  font-size: 0.925rem;
-  line-height: 1.5;
-  word-break: break-word;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  /* Sadece taşan uzun kelimeler kırılsın; normal kelimeler bütün kalsın */
+  overflow-wrap: anywhere;
+  word-break: normal;
   white-space: pre-wrap;
   position: relative;
 }

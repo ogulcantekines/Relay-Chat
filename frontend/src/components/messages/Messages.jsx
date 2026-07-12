@@ -56,7 +56,9 @@ const Messages = ({ searchTerm = "" }) => {
     }
 
     return (
-        <div className='flex-1 overflow-y-auto overflow-x-hidden scroll-slim py-3'>
+        <div className='flex-1 min-h-0 overflow-y-auto overflow-x-hidden scroll-slim py-3 flex flex-col'>
+            {/* mt-auto: az mesaj varken liste alta yaslanır, çoğaldığında normal akar */}
+            <div className='mt-auto'>
             {visible.map((message, i) => {
                 const prev = visible[i - 1];
                 const date = new Date(message.createdAt || message.timestamp);
@@ -88,6 +90,7 @@ const Messages = ({ searchTerm = "" }) => {
                 );
             })}
             <div ref={bottomRef} />
+            </div>
         </div>
     );
 };

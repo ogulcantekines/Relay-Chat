@@ -106,7 +106,7 @@ const MessageContainer = () => {
     const isOnline = selectedConversation && onlineUsers.includes(selectedConversation._id);
 
     return (
-        <div className="md:min-w-[450px] flex flex-col h-full">
+        <div className="flex flex-col h-full w-full min-w-0" style={{ background: 'var(--bg-base)' }}>
             {noChatSelected ? <NoChatSelected /> : (<> {/* Sohbet seçilmemişse NoChatSelected, seçilmişse mesaj alanı */}
 
                 {/* ═══════════ HEADER ═══════════ */}
@@ -297,7 +297,7 @@ const MessageContainer = () => {
                 )}
 
                 {/* ═══════════ MESAJLAR ═══════════ */}
-                <div className="flex-1 overflow-hidden">
+                <div className="flex-1 min-h-0 flex flex-col">
                     <Messages searchTerm={searchTerm} />
                 </div>
 

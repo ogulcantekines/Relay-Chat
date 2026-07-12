@@ -104,19 +104,23 @@ const Message = ({ message, searchTerm = "", showAvatar = true }) => {
             className={`group flex gap-2 px-4 ${showAvatar ? 'mt-3' : 'mt-0.5'} ${fromMe ? 'flex-row-reverse' : 'flex-row'} animate-rise`}
             onMouseLeave={() => setShowPicker(false)}
         >
-            {/* Ardışık mesajlarda avatar tekrar edilmez, yerine boşluk bırakılır */}
-            <div className='w-8 flex-shrink-0'>
-                {showAvatar && (
-                    <img
-                        src={profilePic}
-                        alt=''
-                        className='w-8 h-8 rounded-full object-cover'
-                        style={{ border: '1px solid var(--border-subtle)' }}
-                    />
-                )}
-            </div>
+            {/* Avatar yalnızca karşı taraf için gösterilir; kendi mesajlarımızda
+                kim olduğumuz zaten belli, tekrar etmek yer kaplıyordu.
+                Ardışık mesajlarda da tekrar edilmez, yerine boşluk bırakılır. */}
+            {!fromMe && (
+                <div className='w-8 flex-shrink-0'>
+                    {showAvatar && (
+                        <img
+                            src={profilePic}
+                            alt=''
+                            className='w-8 h-8 rounded-full object-cover'
+                            style={{ border: '1px solid var(--border-subtle)' }}
+                        />
+                    )}
+                </div>
+            )}
 
-            <div className={`flex flex-col min-w-0 ${fromMe ? 'items-end' : 'items-start'}`}>
+            <div className={`flex flex-col min-w-0 max-w-[min(34rem,calc(100%-3.5rem))] ${fromMe ? 'items-end' : 'items-start'}`}>
                 <div className='relative'>
                     <div
                         className={`bubble ${fromMe ? 'bubble-out' : 'bubble-in'} ${message.isDeleted ? 'italic opacity-60' : ''}`}
