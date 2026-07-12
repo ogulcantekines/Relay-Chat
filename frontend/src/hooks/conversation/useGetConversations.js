@@ -88,6 +88,11 @@ const useGetConversations = () => {
         };
 
         getConversations();
+        // Bilerek yalnızca authUser'a bağlı: sohbetler oturum başına bir kez
+        // çekiliyor. Store setter'ları ve isConversationsLoaded eklenirse
+        // efekt kendi yazdığı state yüzünden tekrar tetiklenip döngüye girer;
+        // sonraki güncellemeler zaten socket olaylarıyla geliyor.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [authUser]);
 
     return { loading, conversations };

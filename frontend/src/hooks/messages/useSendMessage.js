@@ -36,7 +36,6 @@ const useSendMessage = () => {
 
             if (res.ok) {
                 const data = await res.json();
-                console.log('Message sent:', data);
                 toast.success("Message sent successfully"); // UX: Sürekli toast çıkması rahatsız edebilir
 
                 // Mesajı local state'e ekle (anında UI'da görünsün)

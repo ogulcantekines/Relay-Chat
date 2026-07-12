@@ -4,11 +4,11 @@ const playSound = (isChatOpen) => {
         const soundFile = isChatOpen ? '/message.mp3' : '/notification.mp3';
         const audio = new Audio(soundFile);
         audio.volume = 0.4;
-        audio.play().catch(error => {
-            console.log('Could not play sound:', error);
+        audio.play().catch(() => {
+            // Tarayıcı otomatik oynatmayı engelleyebilir; bu bir hata değil
         });
-    } catch (error) {
-        console.log('Audio not supported:', error);
+    } catch {
+        // Ses desteklenmiyorsa sessizce devam et
     }
 };
 

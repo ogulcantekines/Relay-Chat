@@ -57,7 +57,6 @@ const useSignup = () => {
             setAuthUser(userToSave); // Zustand store'daki setAuthUser fonksiyonu ile kullanıcı bilgisi kaydediliyor, localStorage'a kaydediliyor oradaki fonksiyonun içinde
             connectSocket(userToSave._id); //io bağlantısı kuruluyor
 
-            console.log('Signup successful:', data);
             toast.success("Sign up successful");
 
         } catch (err) {
