@@ -4,7 +4,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import express from "express";
 import cookieParser from "cookie-parser";
-import rateLimit from "express-rate-limit";
+import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 import compression from "compression";
 import connectToMongoDB from "./db/connectToMongoDB.js";
 import authRoutes from "./routes/auth.route.js";
@@ -23,7 +23,15 @@ if (!process.env.JWT_SECRET) {
     process.exit(1);
 }
 
-// Reverse proxy (nginx, Docker, PaaS) arkasında doğru istemci IP'si için
+// Reverse proxy (nginx, PaaS) arkasında doğru istemci IP'si için.
+// Yalnızca X-Forwarded-For başlığı ekleyen L7 proxy'lerde işe yarar.
+//
+// Not: Docker Desktop (Windows/macOS) portu bir L4 kullanıcı-alanı proxy'si
+// ile aktarır; bağlantıyı sonlandırıp yenisini açtığı için gerçek istemci
+// IP'si kaybolur ve uygulama tüm istekleri bridge adresinden (172.x.x.1)
+// geliyormuş gibi görür. Bu durumda aşağıdaki rate limit, farklı cihazları
+// tek bir istemci sayar. Linux sunucuda gerçek DNAT uygulandığı için
+// istemci IP'si korunur ve limit cihaz başına çalışır.
 app.set("trust proxy", 1);
 
 // Yanıtları gzip ile sıkıştır: derlenmiş JS paketi 351 KB'tan ~108 KB'a iner.
@@ -36,9 +44,27 @@ app.use(cookieParser()); // Cookie'leri işlemek için
 // Kaba kuvvet denemelerini yavaşlatmak için giriş/kayıt uçlarına limit
 const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 dakika
-    max: 20,                  // IP başına 20 deneme
+    max: 20,
     standardHeaders: true,
     legacyHeaders: false,
+
+    // Sayaç yalnızca IP'ye değil, denenen kullanıcı adına da bağlı.
+    //
+    // Tek başına IP kullanmak, istemci adresinin ayırt edici olmadığı her
+    // durumda yanlış sonuç veriyordu: aynı ağın arkasındaki (ya da Docker
+    // Desktop'ın L4 proxy'si yüzünden tek adrese düşen) kullanıcılar aynı
+    // kovayı paylaşıyor, biri limiti tüketince diğerleri de kilitleniyordu.
+    //
+    // Kullanıcı adını anahtara katmak asıl amacı korur: tek bir hesaba
+    // yapılan kaba kuvvet denemesi yine 20'de durur, ama farklı hesaplara
+    // giren kişiler birbirini etkilemez.
+    keyGenerator: (req) => {
+        const account = typeof req.body?.username === "string"
+            ? req.body.username.toLowerCase().slice(0, 64)
+            : "";
+        return `${ipKeyGenerator(req.ip)}:${account}`;
+    },
+
     message: { message: "Too many attempts, please try again later." }
 });
 

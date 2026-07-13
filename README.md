@@ -73,6 +73,16 @@ served from, so no extra configuration is needed.
 
 On Windows the firewall may ask to allow the port the first time.
 
+Worth knowing: Docker Desktop on Windows and macOS forwards the port
+through a user-space proxy that terminates the TCP connection and opens a
+new one, so the original client address never reaches the app — every
+request appears to come from the bridge gateway. A Linux host forwards
+with real DNAT and the address survives.
+
+Because of that, the auth rate limit counts attempts per account rather
+than per address alone, so one device exhausting the limit cannot lock
+everyone else out.
+
 To stop it, and to also drop the database volume:
 
 ```bash
