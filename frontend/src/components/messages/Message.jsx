@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import useAuth from "../../zustand/useAuth";
 import useConversation from "../../zustand/useConversation";
 import useEditMessage from "../../hooks/messages/useEditMessage";
@@ -32,6 +32,28 @@ const Message = ({ message, searchTerm = "", showAvatar = true }) => {
     const [isEditing, setIsEditing] = useState(false);
     const [editedText, setEditedText] = useState(message.message);
     const [showPicker, setShowPicker] = useState(false);
+    const [showActions, setShowActions] = useState(false); // dokunmatik için
+    const pickerRef = useRef(null);
+
+    // Seçici yalnızca dışarı tıklanınca veya Escape ile kapanır.
+    // Önceden imleç mesajdan ayrılır ayrılmaz kapandığı için
+    // emojiye ulaşmaya çalışırken kayboluyordu.
+    useEffect(() => {
+        if (!showPicker && !showActions) return;
+        const onDown = (e) => {
+            if (!pickerRef.current?.contains(e.target)) {
+                setShowPicker(false);
+                setShowActions(false);
+            }
+        };
+        const onKey = (e) => { if (e.key === "Escape") setShowPicker(false); };
+        document.addEventListener("mousedown", onDown);
+        document.addEventListener("keydown", onKey);
+        return () => {
+            document.removeEventListener("mousedown", onDown);
+            document.removeEventListener("keydown", onKey);
+        };
+    }, [showPicker, showActions]);
 
     // ObjectId/string uyuşmazlığını önlemek için String() kullan
     const fromMe = String(message.senderId) === String(authUser._id);
@@ -102,7 +124,6 @@ const Message = ({ message, searchTerm = "", showAvatar = true }) => {
     return (
         <div
             className={`group flex gap-2 px-4 ${showAvatar ? 'mt-3' : 'mt-0.5'} ${fromMe ? 'flex-row-reverse' : 'flex-row'} animate-rise`}
-            onMouseLeave={() => setShowPicker(false)}
         >
             {/* Avatar yalnızca karşı taraf için gösterilir; kendi mesajlarımızda
                 kim olduğumuz zaten belli, tekrar etmek yer kaplıyordu.
@@ -121,9 +142,10 @@ const Message = ({ message, searchTerm = "", showAvatar = true }) => {
             )}
 
             <div className={`flex flex-col min-w-0 max-w-[min(34rem,calc(100%-3.5rem))] ${fromMe ? 'items-end' : 'items-start'}`}>
-                <div className='relative'>
+                <div className='relative' ref={pickerRef}>
                     <div
                         className={`bubble ${fromMe ? 'bubble-out' : 'bubble-in'} ${message.isDeleted ? 'italic opacity-60' : ''}`}
+                        onClick={() => setShowActions(v => !v)}
                     >
                         {message.isDeleted
                             ? "Bu mesaj silindi"
@@ -135,8 +157,9 @@ const Message = ({ message, searchTerm = "", showAvatar = true }) => {
                         <div
                             // Dar ekranda balonun yanında yer yok; butonlar balonun
                             // üstüne alınır. Geniş ekranda yanda durmaya devam eder.
-                            className={`absolute z-10 flex items-center gap-0.5 opacity-0 group-hover:opacity-100
-                                        focus-within:opacity-100 transition-opacity
+                            className={`absolute z-10 flex items-center gap-0.5 transition-opacity
+                                        ${showActions ? 'opacity-100' : 'opacity-0'} group-hover:opacity-100
+                                        focus-within:opacity-100
                                         bottom-full mb-1 md:bottom-auto md:top-1/2 md:mb-0 md:-translate-y-1/2
                                         ${fromMe ? 'right-0 md:right-full md:mr-1.5' : 'left-0 md:left-full md:ml-1.5'}`}
                         >
@@ -182,6 +205,7 @@ const Message = ({ message, searchTerm = "", showAvatar = true }) => {
                             {REACTIONS.map(emoji => (
                                 <button
                                     key={emoji}
+                                    type='button'
                                     onClick={() => { react(message._id, emoji); setShowPicker(false); }}
                                     className='w-8 h-8 rounded-lg text-base hover:scale-110 transition-transform'
                                     title={emoji}
