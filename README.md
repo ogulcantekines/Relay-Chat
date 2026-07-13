@@ -60,6 +60,19 @@ docker compose up --build
 
 The app is then available at <http://localhost:5000>.
 
+### Using it from another device
+
+The container listens on every interface, so anything on the same network
+can reach it at `http://<your-machine-ip>:5000` — a phone, for instance.
+Sign in on both devices and messages arrive live over the socket.
+
+Two settings matter here. `COOKIE_SECURE` must stay `false` over plain
+HTTP, or the browser discards the session cookie and every request comes
+back 401. The client picks up the socket address from the page it was
+served from, so no extra configuration is needed.
+
+On Windows the firewall may ask to allow the port the first time.
+
 To stop it, and to also drop the database volume:
 
 ```bash
@@ -100,7 +113,8 @@ cp .env.example .env
 | `PORT`       | Port the API server listens on (default `5000`)                     |
 | `MONGO_URI`  | MongoDB connection string                                           |
 | `JWT_SECRET` | Secret used to sign JWTs — use a long random value                  |
-| `NODE_ENV`   | `production` enables the `Secure` cookie flag (requires HTTPS)       |
+| `NODE_ENV`   | `production` serves the built frontend from Express                 |
+| `COOKIE_SECURE` | `true` behind HTTPS; must be `false` over plain HTTP             |
 | `CLIENT_URL` | Origin allowed by Socket.IO CORS (default `http://localhost:3000`)   |
 
 Generate a strong secret with:
@@ -269,9 +283,8 @@ docker build -t mern-chatapp .
 docker run -d -p 5000:5000   -e NODE_ENV=production   -e MONGO_URI="<your connection string>"   -e JWT_SECRET="<your secret>"   mern-chatapp
 ```
 
-Behind a reverse proxy, terminate TLS there and forward to port 5000.
-`NODE_ENV=production` also turns on the `Secure` cookie flag, which
-requires the app to be served over HTTPS.
+Behind a reverse proxy, terminate TLS there and forward to port 5000, and
+set `COOKIE_SECURE=true` so the session cookie is only sent over HTTPS.
 
 ## Contributing
 
