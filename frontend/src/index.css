@@ -44,16 +44,41 @@ body {
   overflow: hidden;
 }
 
-/* Sabit, hafif hareketli arka plan: sayfa kaydırırken ışıltılar yerinde kalır */
+/* Arka plan iki katman:
+   ::before  → yavaşça yer değiştiren renk bulutları (aurora)
+   ::after   → ince ızgara deseni, derinlik hissi verir
+   İkisi de sabit; sayfa kaydırılırken yerinde kalır. */
 body::before {
+  content: "";
+  position: fixed;
+  inset: -20%;
+  z-index: -2;
+  background:
+    radial-gradient(38rem 38rem at 15% 20%, rgba(99, 102, 241, 0.28), transparent 62%),
+    radial-gradient(34rem 34rem at 85% 75%, rgba(168, 85, 247, 0.24), transparent 62%),
+    radial-gradient(30rem 30rem at 70% 15%, rgba(14, 165, 233, 0.20), transparent 62%),
+    radial-gradient(26rem 26rem at 25% 85%, rgba(236, 72, 153, 0.16), transparent 62%);
+  filter: blur(40px);
+  animation: drift 28s ease-in-out infinite alternate;
+}
+
+body::after {
   content: "";
   position: fixed;
   inset: 0;
   z-index: -1;
-  background:
-    radial-gradient(60rem 60rem at 12% 18%, rgba(99, 102, 241, 0.16), transparent 60%),
-    radial-gradient(48rem 48rem at 88% 78%, rgba(124, 58, 237, 0.14), transparent 60%),
-    radial-gradient(40rem 40rem at 68% 12%, rgba(14, 165, 233, 0.10), transparent 60%);
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.022) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.022) 1px, transparent 1px);
+  background-size: 46px 46px;
+  mask-image: radial-gradient(ellipse 80% 70% at 50% 40%, #000 35%, transparent 100%);
+  -webkit-mask-image: radial-gradient(ellipse 80% 70% at 50% 40%, #000 35%, transparent 100%);
+}
+
+@keyframes drift {
+  0%   { transform: translate3d(0, 0, 0) scale(1); }
+  50%  { transform: translate3d(2%, -2%, 0) scale(1.06); }
+  100% { transform: translate3d(-2%, 1.5%, 0) scale(1.02); }
 }
 
 /* ── Kaydırma çubuğu ── */
@@ -78,8 +103,11 @@ body::before {
 
 /* ── Yüzeyler ── */
 .surface {
-  background-color: var(--bg-panel);
+  background-color: color-mix(in srgb, var(--bg-panel) 92%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border: 1px solid var(--border-subtle);
+  box-shadow: 0 24px 60px -20px rgba(0, 0, 0, 0.65);
 }
 
 .surface-glass {
@@ -210,7 +238,8 @@ body::before {
 /* Hareket azaltma tercihini olan kullanıcılar için animasyonları kapat */
 @media (prefers-reduced-motion: reduce) {
   .animate-rise,
-  .dot-blink {
+  .dot-blink,
+  body::before {
     animation: none;
   }
 }
