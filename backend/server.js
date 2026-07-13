@@ -6,6 +6,7 @@ import express from "express";
 import cookieParser from "cookie-parser";
 import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 import compression from "compression";
+import helmet from "helmet";
 import connectToMongoDB from "./db/connectToMongoDB.js";
 import authRoutes from "./routes/auth.route.js";
 import messageRoutes from "./routes/message.route.js";
@@ -33,6 +34,31 @@ if (!process.env.JWT_SECRET) {
 // tek bir istemci sayar. Linux sunucuda gerçek DNAT uygulandığı için
 // istemci IP'si korunur ve limit cihaz başına çalışır.
 app.set("trust proxy", 1);
+
+// Güvenlik başlıkları.
+// Uygulama kendi arayüzünü servis ettiği için CSP'de 'self' yeterli;
+// avatarlar ui-avatars.com'dan geldiği için img-src'ye o da ekleniyor.
+// connect-src'de ws/wss var, yoksa Socket.IO bağlantısı CSP'ye takılır.
+app.use(helmet({
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: ["'self'"],
+            styleSrc: ["'self'", "'unsafe-inline'"], // bileşenler satır içi stil kullanıyor
+            imgSrc: ["'self'", "data:", "https://ui-avatars.com"],
+            mediaSrc: ["'self'"],
+            connectSrc: ["'self'", "ws:", "wss:"],
+            objectSrc: ["'none'"],
+            frameAncestors: ["'none'"], // clickjacking
+            baseUri: ["'self'"],
+            formAction: ["'self'"]
+        }
+    },
+    // Çapraz kaynak izolasyonu arayüzdeki harici avatarları engelliyordu
+    crossOriginEmbedderPolicy: false,
+    // HSTS yalnızca HTTPS arkasında anlamlı
+    hsts: process.env.COOKIE_SECURE === "true"
+}));
 
 // Yanıtları gzip ile sıkıştır: derlenmiş JS paketi 351 KB'tan ~108 KB'a iner.
 app.use(compression());
