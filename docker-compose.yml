@@ -25,6 +25,8 @@ services:
       # Compose ağı içinde servis adı host olarak kullanılır
       MONGO_URI: mongodb://mongo:27017/chatapp
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required, set it in .env}
+      # HTTPS arkasına alındığında .env içinde true yapın
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
       CLIENT_URL: ${CLIENT_URL:-http://localhost:5000}
     depends_on:
       mongo:

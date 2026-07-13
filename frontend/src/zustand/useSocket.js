@@ -12,7 +12,16 @@ const useSocket = create((set, get) => ({
         if (get().socket?.connected) return; // Zaten bağlıysa çık
 
         //ana http bağlantı adresi
-        const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:5000";
+        // Adres sırası:
+        //   1. VITE_SOCKET_URL — backend ayrı bir alan adındaysa
+        //   2. sayfanın kendi adresi — production'da aynı sunucudan servis ediliyor,
+        //      böylece uygulamaya 192.168.x.x ya da bir alan adıyla girildiğinde
+        //      socket de oraya bağlanır (sabit localhost yazılırsa telefondan
+        //      açıldığında telefonun kendisine bağlanmaya çalışırdı)
+        //   3. geliştirme yedeği — Vite 3000'de, backend 5000'de
+        const SOCKET_URL =
+            import.meta.env.VITE_SOCKET_URL ||
+            (import.meta.env.PROD ? window.location.origin : "http://localhost:5000");
         const socket = io(SOCKET_URL, { //backenddeki socket aktif oluyor, backenddeki io.on("connection", ...) kısmı tetiklenir
             query: {
                 userId: userId // Kullanıcı kimliğini handshake'e ekleriz ve backend ile bağlantı kurarız

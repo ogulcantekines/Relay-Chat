@@ -1,4 +1,5 @@
 import jwt from "jsonwebtoken";
+import { cookieSecure, cookieSameSite } from "../config/env.js";
 
 const generateTokenAndSetCookie = (user, res) => {
     // Kullanıcı bilgilerini içeren bir JWT token oluştur id ve username.
@@ -13,9 +14,9 @@ const generateTokenAndSetCookie = (user, res) => {
     // Token'ı çerezde sakla(HTTP only cookie olarak)
     res.cookie("token", token, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
+        secure: cookieSecure,
         maxAge: 15 * 24 * 60 * 60 * 1000,// 15 days
-        sameSite: "strict"
+        sameSite: cookieSameSite
     });
 };
 

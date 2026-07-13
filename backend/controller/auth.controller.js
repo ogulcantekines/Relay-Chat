@@ -2,6 +2,7 @@ import User from "../models/user.model.js";
 import bcyrpt from "bcryptjs";
 import generateTokenAndSetCookie from "../utils/generateToken.js";
 import generateFriendCode from "../utils/generateFriendCode.js";
+import { cookieSecure, cookieSameSite } from "../config/env.js";
 
 export const signup = async (req, res) => {
     try {
@@ -118,8 +119,8 @@ export const logout = (req, res) => {
     try {
         res.clearCookie("token", {  //çerezi temizle cookieden id ve username silinir.
             httpOnly: true,
-            secure: process.env.NODE_ENV === "production",
-            sameSite: "strict",
+            secure: cookieSecure,
+            sameSite: cookieSameSite,
             maxAge: 0
         });
         res.status(200).send({ message: "Logout successful" });

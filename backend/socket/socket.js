@@ -6,9 +6,17 @@ import Message from "../models/message.model.js";
 const app = express(); //express serverı oluşturma
 const server = http.createServer(app); //ana kapsayıcı http serverı oluşturma ve expressi onu subserverın olarak kullanma
 
+// CORS yalnızca istemci farklı bir adresten geldiğinde gerekir.
+// Production'da arayüz bu sunucudan servis edildiği için istek aynı kökenli
+// olur ve CORS'a gerek kalmaz; CLIENT_URL verilirse (arayüz ayrı bir yerde
+// barındırılıyorsa) yalnızca o adrese izin verilir.
+// Geliştirmede Vite 3000'de çalıştığı için oraya izin verilir.
+const allowedOrigin = process.env.CLIENT_URL
+    || (process.env.NODE_ENV === "production" ? true : "http://localhost:3000");
+
 const io = new Server(server, {  //ana kapsayıcı http serverını kullanarak socket.io subserverı oluşturma
     cors: {
-        origin: process.env.CLIENT_URL || "http://localhost:3000",
+        origin: allowedOrigin,
         methods: ["GET", "POST"],
         credentials: true
     }
