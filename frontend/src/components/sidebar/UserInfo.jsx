@@ -79,7 +79,7 @@ const UserInfo = ({ onAddFriendClick, onNotificationClick }) => { // onAddFriend
   
 
     return (
-        <div className="relative p-4 bg-gray-800 border-b border-gray-700">
+        <div className="relative p-4 bg-[color:var(--bg-panel)] border-b border-[color:var(--border-subtle)]">
             <div className="flex items-center justify-between">
 
                 {/* sol: Kullanıcı Bilgisi */}
@@ -88,7 +88,7 @@ const UserInfo = ({ onAddFriendClick, onNotificationClick }) => { // onAddFriend
                     <div>
                         <p className="font-bold text-white">
                             {authUser?.username}</p>
-                        <p className="text-xs text-gray-400">
+                        <p className="text-xs text-[color:var(--text-muted)]">
                             #{authUser?.friendCode}</p>
                     </div>
                 </div>
@@ -98,7 +98,7 @@ const UserInfo = ({ onAddFriendClick, onNotificationClick }) => { // onAddFriend
                     {/* Arkadaş Ekle */}
                     <button
                         onClick={onAddFriendClick} // Tıklayınca Sidebar'daki setView("addFriend") fonksiyonunu çağır
-                        className="btn btn-sm bg-sky-500 hover:bg-sky-600 border-none text-white"
+                        className="btn btn-sm bg-[color:var(--accent)] hover:bg-[color:var(--accent-hover)] border-none text-white"
                         title="Arkadaş Ekle"
                     >
                         <FaUserPlus />
@@ -121,9 +121,9 @@ const UserInfo = ({ onAddFriendClick, onNotificationClick }) => { // onAddFriend
 
                         {/* Dropdown Menu */}
                         {isDropdownOpen && (
-                            <div className="absolute left-1/2 -translate-x-1/2 mt-2 w-96 bg-gray-800 rounded-lg shadow-lg border border-gray-700 z-50">
+                            <div className="absolute left-1/2 -translate-x-1/2 mt-2 w-96 bg-[color:var(--bg-panel)] rounded-lg shadow-lg border border-[color:var(--border-subtle)] z-50">
                                 {/* Header */}
-                                <div className="p-3 border-b border-gray-700">
+                                <div className="p-3 border-b border-[color:var(--border-subtle)]">
                                     <h3 className="text-white font-semibold">
                                         Notifications ({totalNotifications})
                                     </h3>
@@ -132,7 +132,7 @@ const UserInfo = ({ onAddFriendClick, onNotificationClick }) => { // onAddFriend
                                 {/* Content */}
                                 <div className="max-h-96 overflow-y-auto">
                                     {totalNotifications === 0 ? (
-                                        <div className="p-4 text-center text-gray-400">
+                                        <div className="p-4 text-center text-[color:var(--text-muted)]">
                                             No new notifications
                                         </div>
                                     ) : (
@@ -142,21 +142,21 @@ const UserInfo = ({ onAddFriendClick, onNotificationClick }) => { // onAddFriend
                                                 <button
                                                     key={request._id}
                                                     onClick={() => handleNotificationClick("friends")}
-                                                    className="w-full p-3 hover:bg-gray-750 transition-colors text-left border-b border-gray-700"
+                                                    className="w-full p-3 hover:bg-[color:var(--bg-hover)] transition-colors text-left border-b border-[color:var(--border-subtle)]"
                                                 >
                                                     <div className="flex items-center gap-3">
-                                                        <div className="p-2 bg-sky-500 rounded-full">
+                                                        <div className="p-2 bg-[color:var(--accent)] rounded-full">
                                                             <FaUserFriends className="text-white" />
                                                         </div>
                                                         <div className="flex-1 min-w-0">
                                                             <p className="text-white font-medium">
                                                                 {request.senderId?.username} #{request.senderId?.friendCode}
                                                             </p>
-                                                            <p className="text-sm text-gray-400">
+                                                            <p className="text-sm text-[color:var(--text-muted)]">
                                                                 sent you a friend request
                                                             </p>
                                                         </div>
-                                                        <span className="text-xs text-gray-500 flex-shrink-0">
+                                                        <span className="text-xs text-[color:var(--text-muted)] flex-shrink-0">
                                                             {formatTimestamp(request.createdAt)}
                                                         </span>
                                                     </div>
@@ -168,7 +168,7 @@ const UserInfo = ({ onAddFriendClick, onNotificationClick }) => { // onAddFriend
                                                 <button
                                                     key={request._id}
                                                     onClick={() => handleNotificationClick("requests")}
-                                                    className="w-full p-3 hover:bg-gray-750 transition-colors text-left border-b border-gray-700"
+                                                    className="w-full p-3 hover:bg-[color:var(--bg-hover)] transition-colors text-left border-b border-[color:var(--border-subtle)]"
                                                 >
                                                     <div className="flex items-center gap-3">
                                                         <div className="p-2 bg-green-500 rounded-full">
@@ -178,11 +178,11 @@ const UserInfo = ({ onAddFriendClick, onNotificationClick }) => { // onAddFriend
                                                             <p className="text-white font-medium">
                                                                 {request.senderId?.username} #{request.senderId?.friendCode}
                                                             </p>
-                                                            <p className="text-sm text-gray-400">
+                                                            <p className="text-sm text-[color:var(--text-muted)]">
                                                                 sent you a message request
                                                             </p>
                                                         </div>
-                                                        <span className="text-xs text-gray-500 flex-shrink-0">
+                                                        <span className="text-xs text-[color:var(--text-muted)] flex-shrink-0">
                                                             {formatTimestamp(request.createdAt)}
                                                         </span>
                                                     </div>

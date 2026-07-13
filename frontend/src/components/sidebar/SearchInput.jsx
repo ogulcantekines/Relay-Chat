@@ -41,12 +41,12 @@ const SearchInput = () => {
         <form className="flex items-center gap-4 mt-5 mr-4 ml-2" onSubmit={handleSubmit}>
             <input
                 type='text'
-                placeholder='Search...'
+                placeholder='Ara...'
                 className="input input-bordered rounded-full"
                 value={search} // inputun değeri state'e bağlı
                 onChange={(e) => setSearch(e.target.value)} // input değiştiğinde,yeni bir şey yazılıp veya silindiğinde state güncelleniyor
             />
-            <button type="submit" className="btn btn-circle bg-sky-500 text-white" >
+            <button type="submit" className="btn btn-circle bg-[color:var(--accent)] text-white" >
                 <IoSearchSharp className="w-6 h-6 outline-none" />
             </button>
         </form>

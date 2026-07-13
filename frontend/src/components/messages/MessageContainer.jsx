@@ -21,7 +21,7 @@ import useRespondToFriendRequests from "../../hooks/friends/useRespondToFriendRe
 // MessageContainer Bileşeni - Mesaj görüntüleme alanı
 // Bu bileşen arkadaşlık sistemiyle yoğun şekilde entegre çalışır:
 // 1. Mesaj isteği Banner'ı → pending conversation'da alıcıya Accept/Delete seçenekleri sunar
-// 2. Arkadaşlık durumu Banner'ı → arkadaş değilse "Add Friend" / "Accept Request" banner'ı gösterir
+// 2. Arkadaşlık durumu Banner'ı → arkadaş değilse "Arkadaş ekle" / "İsteği kabul et" banner'ı gösterir
 // 3. Online/offline durumu → sadece seçili sohbetin kişisi için gösterilir
 // 4. chatOpened event → sadece gerçek conversation'lar için emit edilir (draft'lar için değil)
 
@@ -202,15 +202,15 @@ const MessageContainer = () => {
                 {/* Gösterilme koşulları:
                     1. isPending → Conversation status "pending" olmalı
                     2. isReceiver → Son mesajı karşı taraf göndermiş olmalı (biz alıcıyız)
-                    Bu banner sadece ALICIYA gösterilir → "Accept & Chat" veya "Delete" */}
+                    Bu banner sadece ALICIYA gösterilir → "Kabul et ve sohbet et" veya "Delete" */}
                 {isPending && isReceiver && (
-                    <div className="bg-gray-800/95 p-6 border-b border-gray-700 flex flex-col items-center gap-4 animate-in fade-in slide-in-from-top-4 duration-500 backdrop-blur-md">
+                    <div className="bg-[color:var(--bg-panel)] p-6 border-b border-[color:var(--border-subtle)] flex flex-col items-center gap-4 animate-in fade-in slide-in-from-top-4 duration-500 backdrop-blur-md">
                         <div className="text-center px-4">
                             <h3 className="text-white text-lg font-bold flex items-center gap-2 justify-center">
-                                📩 New Message Request
+                                📩 Yeni mesaj isteği
                             </h3>
-                            <p className="text-sm text-gray-400 mt-1">
-                                {selectedConversation.fullName} wants to chat with you.
+                            <p className="text-sm text-[color:var(--text-muted)] mt-1">
+                                {selectedConversation.fullName} seninle sohbet etmek istiyor.
                             </p>
                         </div>
                         <div className="flex gap-4 w-full max-w-xs justify-center">
@@ -220,7 +220,7 @@ const MessageContainer = () => {
                                 disabled={actionLoading}
                                 className="btn btn-sm flex-1 bg-green-600 hover:bg-green-700 border-none text-white h-11"
                             >
-                                {actionLoading ? <span className="loading loading-spinner loading-sm"></span> : "Accept & Chat"}
+                                {actionLoading ? <span className="loading loading-spinner loading-sm"></span> : "Kabul et ve sohbet et"}
                             </button>
                             {/* Reddet → declineRequest(userId) → conversation ve mesajlar silinir */}
                             <button
@@ -242,21 +242,21 @@ const MessageContainer = () => {
                     4. conversations.some → Sidebar'da olan gerçek bir conversation (draft değil)
                     
                     Banner 3 farklı durum gösterir:
-                    - sentRequest var → "Request already sent..."
-                    - incomingRequest var → "X sent you a request" + Accept butonu
-                    - İkisi de yok → "You are not friends with X" + Add Friend butonu */}
+                    - sentRequest var → "İstek zaten gönderildi"
+                    - incomingRequest var → "X sana istek gönderdi" + Accept butonu
+                    - İkisi de yok → "Arkadaş değilsiniz: X" + Add Friend butonu */}
                 {!isPending && !isFriend && !isBannerDismissed && conversations.some(c => c._id === selectedConversation._id) && (
-                    <div className="bg-sky-500/10 p-2 border-b border-sky-500/20 flex items-center justify-between group animate-in fade-in slide-in-from-bottom-2 duration-300">
+                    <div className="bg-[color:var(--accent)]/10 p-2 border-b border-[color:var(--accent)]/20 flex items-center justify-between group animate-in fade-in slide-in-from-bottom-2 duration-300">
                         <div className="flex items-center gap-3 ml-2">
-                            <TiMessages className="text-sky-400 text-xl" />
+                            <TiMessages className="text-[color:var(--accent-hover)] text-xl" />
                             <div>
-                                <span className="text-xs font-semibold text-sky-400 block uppercase tracking-wider">Friendship Status</span>
-                                <p className="text-sm text-gray-300">
+                                <span className="text-xs font-semibold text-[color:var(--accent-hover)] block uppercase tracking-wider">Arkadaşlık durumu</span>
+                                <p className="text-sm text-[color:var(--text-secondary)]">
                                     {sentRequest
-                                        ? "Request already sent..."
+                                        ? "İstek zaten gönderildi"
                                         : incomingRequest
-                                            ? `${selectedConversation.fullName} sent you a request`
-                                            : `You are not friends with ${selectedConversation.fullName}`}
+                                            ? `${selectedConversation.fullName} sana istek gönderdi`
+                                            : `Arkadaş değilsiniz: ${selectedConversation.fullName}`}
                                 </p>
                             </div>
                         </div>
@@ -267,9 +267,9 @@ const MessageContainer = () => {
                                 <button
                                     onClick={() => respondToRequest(incomingRequest._id, "accept")}
                                     disabled={respondFriendLoading}
-                                    className="btn btn-xs bg-sky-500 hover:bg-sky-600 border-none text-white px-4"
+                                    className="btn btn-xs bg-[color:var(--accent)] hover:bg-[color:var(--accent-hover)] border-none text-white px-4"
                                 >
-                                    {respondFriendLoading ? "..." : "Accept Request"}
+                                    {respondFriendLoading ? "..." : "İsteği kabul et"}
                                 </button>
                             )}
 
@@ -278,17 +278,17 @@ const MessageContainer = () => {
                                 <button
                                     onClick={handleAddFriend}
                                     disabled={sendFriendLoading}
-                                    className="btn btn-xs btn-info bg-sky-500/20 hover:bg-sky-500 border-sky-500/50 text-sky-400 hover:text-white transition-all"
+                                    className="btn btn-xs btn-info bg-[color:var(--accent)]/20 hover:bg-[color:var(--accent)] border-[color:var(--accent)]/50 text-[color:var(--accent-hover)] hover:text-white transition-all"
                                 >
-                                    {sendFriendLoading ? "..." : "Add Friend"}
+                                    {sendFriendLoading ? "..." : "Arkadaş ekle"}
                                 </button>
                             )}
 
                             {/* Banner'ı kapat (X butonu) */}
                             <button
                                 onClick={() => setIsBannerDismissed(true)}
-                                className="p-1.5 hover:bg-white/10 rounded-full text-gray-400 hover:text-white transition-colors ml-2"
-                                title="Dismiss"
+                                className="p-1.5 hover:bg-white/10 rounded-full text-[color:var(--text-muted)] hover:text-white transition-colors ml-2"
+                                title="Kapat"
                             >
                                 <IoClose className="text-lg" />
                             </button>

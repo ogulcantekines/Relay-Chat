@@ -5,7 +5,7 @@ import useSendFriendRequest from "../../../hooks/friends/useSendFriendRequest";
 import useConversation from "../../../zustand/useConversation";
 
 // AddFriend Bileşeni - Arkadaş ekleme ve mesaj gönderme sayfası
-// Sidebar'daki "Add Friend" butonuna basıldığında gösterilir.
+// Sidebar'daki "Arkadaş ekle" butonuna basıldığında gösterilir.
 // Kullanıcı adı veya friend code ile arama yapar.
 // Bulunan kullanıcılara arkadaşlık isteği gönderebilir veya direkt mesaj atabilir.
 //
@@ -60,11 +60,11 @@ const AddFriend = ({ onBack }) => {
     return (
         <div className="h-full flex flex-col">
             {/* ═══════════ HEADER ═══════════ */}
-            <div className="p-4 bg-gray-800 border-b border-gray-700">
+            <div className="p-4 bg-[color:var(--bg-panel)] border-b border-[color:var(--border-subtle)]">
                 <div className="flex items-center gap-3">
                     <button
                         onClick={onBack} // onclick = {() => {onBack()}} olarakta yazılabilir
-                        className="btn btn-sm btn-circle btn-ghost text-gray-400 hover:text-white hover:bg-gray-700"
+                        className="btn btn-sm btn-circle btn-ghost text-[color:var(--text-muted)] hover:text-white hover:bg-[color:var(--bg-elevated)]"
                         title="Geri"
                     >
                         <FaArrowLeft className="text-lg" />
@@ -78,16 +78,16 @@ const AddFriend = ({ onBack }) => {
                 <div className="relative">
                     <input
                         type="text"
-                        placeholder="Kullanıcı adı veya friend code..."
-                        className="input input-bordered rounded-full w-full bg-gray-800 text-white border-gray-700 focus:border-sky-500 pl-10"
+                        placeholder="Kullanıcı adı veya arkadaş kodu..."
+                        className="input input-bordered rounded-full w-full bg-[color:var(--bg-panel)] text-white border-[color:var(--border-subtle)] focus:border-[color:var(--accent)] pl-10"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                     />
-                    <FaSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+                    <FaSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-[color:var(--text-muted)]" />
                 </div>
                 {/* Minimum karakter uyarısı */}
                 {searchQuery.length > 0 && searchQuery.length < 2 && (
-                    <p className="text-xs text-gray-400 mt-2 ml-4">En az 2 karakter girin</p>
+                    <p className="text-xs text-[color:var(--text-muted)] mt-2 ml-4">En az 2 karakter girin</p>
                 )}
             </div>
 
@@ -103,11 +103,11 @@ const AddFriend = ({ onBack }) => {
                 {/* Boş durum: Henüz arama yapılmadı */}
                 {!searchLoading && searchQuery.length === 0 && (
                     <div className="flex flex-col items-center justify-center py-12 px-6 text-center">
-                        <div className="w-16 h-16 bg-gray-800 rounded-full flex items-center justify-center mb-4">
+                        <div className="w-16 h-16 bg-[color:var(--bg-panel)] rounded-full flex items-center justify-center mb-4">
                             <FaUserPlus className="text-3xl text-gray-600" />
                         </div>
-                        <h3 className="text-white font-semibold mb-2">Search for Friends</h3>
-                        <p className="text-sm text-gray-400">
+                        <h3 className="text-white font-semibold mb-2">Arkadaş ara</h3>
+                        <p className="text-sm text-[color:var(--text-muted)]">
                             Search for friends by username or friend code
                         </p>
                     </div>
@@ -117,8 +117,8 @@ const AddFriend = ({ onBack }) => {
                 {!searchLoading && searchQuery.length >= 2 && users.length === 0 && (
                     <div className="flex flex-col items-center justify-center py-12 px-6 text-center">
                         <div className="text-5xl mb-4">🔍</div>
-                        <h3 className="text-white font-semibold mb-2">User Not Found</h3>
-                        <p className="text-sm text-gray-400">
+                        <h3 className="text-white font-semibold mb-2">Kullanıcı bulunamadı</h3>
+                        <p className="text-sm text-[color:var(--text-muted)]">
                             User Not Found
                         </p>
                     </div>
@@ -130,7 +130,7 @@ const AddFriend = ({ onBack }) => {
                         {users.map((user) => (
                             <div
                                 key={user._id}
-                                className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-800 transition-colors cursor-pointer"
+                                className="flex items-center gap-3 p-3 rounded-lg hover:bg-[color:var(--bg-panel)] transition-colors cursor-pointer"
                             >
                                 {/* Avatar */}
                                 <div className="avatar">
@@ -144,7 +144,7 @@ const AddFriend = ({ onBack }) => {
                                     <p className="font-semibold text-white truncate">
                                         {user.username}
                                     </p>
-                                    <p className="text-sm text-gray-400">
+                                    <p className="text-sm text-[color:var(--text-muted)]">
                                         #{user.friendCode}
                                     </p>
                                 </div>
@@ -153,7 +153,7 @@ const AddFriend = ({ onBack }) => {
                                 <button
                                     onClick={() => handleSendMessage(user)}
                                     className="btn btn-sm bg-green-500 hover:bg-green-600 border-none text-white gap-1"
-                                    title="Send Message"
+                                    title="Mesaj gönder"
                                 >
                                     <FaComment className="text-sm" />
                                 </button>
@@ -162,7 +162,7 @@ const AddFriend = ({ onBack }) => {
                                 <button
                                     onClick={() => handleSendRequest(user._id)}
                                     disabled={sendLoading}
-                                    className="btn btn-sm bg-sky-500 hover:bg-sky-600 border-none text-white gap-1"
+                                    className="btn btn-sm bg-[color:var(--accent)] hover:bg-[color:var(--accent-hover)] border-none text-white gap-1"
                                 >
                                     {sendLoading ? (
                                         <span className="loading loading-spinner loading-xs"></span>

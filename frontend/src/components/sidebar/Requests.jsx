@@ -26,8 +26,8 @@ const Requests = () => {
         <div className="flex flex-col h-full overflow-y-auto">
             {/* Boş durum: Hiç mesaj isteği yoksa bilgilendirici mesaj göster */}
             {messageRequests.length === 0 ? (
-                <div className="p-8 text-center text-gray-400">
-                    <p className="text-lg mb-2">No pending message requests</p>
+                <div className="p-8 text-center text-[color:var(--text-muted)]">
+                    <p className="text-lg mb-2">Bekleyen mesaj isteği yok</p>
                     <p className="text-sm">
                         Message requests from non-friends <br />
                         will appear here
@@ -39,7 +39,7 @@ const Requests = () => {
                     {/* Mesaj İstekleri Listesi */}
                     {messageRequests.length > 0 && (
                         <div>
-                            <h3 className="text-sm font-semibold text-gray-400 px-3 py-2">
+                            <h3 className="text-sm font-semibold text-[color:var(--text-muted)] px-3 py-2">
                                 Message Requests ({messageRequests.length})
                             </h3>
                             <div className="space-y-2">
@@ -48,11 +48,11 @@ const Requests = () => {
                                     <div
                                         key={request._id}
                                         onClick={() => handleViewMessage(request)}
-                                        className="flex items-center gap-3 p-3 bg-gray-800 hover:bg-gray-700 rounded-lg cursor-pointer transition-colors border border-transparent hover:border-sky-500/30"
+                                        className="flex items-center gap-3 p-3 bg-[color:var(--bg-panel)] hover:bg-[color:var(--bg-elevated)] rounded-lg cursor-pointer transition-colors border border-transparent hover:border-[color:var(--accent)]/30"
                                     >
                                         {/* Avatar */}
                                         <div className="avatar">
-                                            <div className="w-12 rounded-full border border-gray-600">
+                                            <div className="w-12 rounded-full border border-[color:var(--border-subtle)]">
                                                 <img
                                                     src={request.profilePic}
                                                     alt={request.username}
@@ -65,13 +65,13 @@ const Requests = () => {
                                             <p className="font-semibold text-white">
                                                 {request.fullName}
                                             </p>
-                                            <p className="text-sm text-gray-400">
+                                            <p className="text-sm text-[color:var(--text-muted)]">
                                                 Wants to send you a message
                                             </p>
                                         </div>
 
                                         {/* Tıklama göstergesi */}
-                                        <div className="text-gray-500 text-xs">
+                                        <div className="text-[color:var(--text-muted)] text-xs">
                                             Click to view
                                         </div>
                                     </div>
