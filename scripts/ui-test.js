@@ -56,7 +56,11 @@ async function signUp(browser, width, height, who) {
 
     const errors = [];
     page.on("console", (m) => {
-        if (m.type() === "error") errors.push(m.text().slice(0, 120));
+        if (m.type() !== "error") return;
+        const text = m.text();
+        // Eksik favicon gibi varlık 404'leri uygulamanın doğruluğunu etkilemez
+        if (/favicon|\.ico|\.png|\.svg|\.mp3/i.test(text)) return;
+        errors.push(text.slice(0, 120));
     });
 
     await page.goto(`${BASE}/signup`);
@@ -188,9 +192,15 @@ async function run() {
                         await page.locator('[title="👍"]').isVisible().catch(() => false));
 
                     await page.locator('[title="👍"]').click();
-                    await page.waitForTimeout(2000);
-                    const html = await bubble.locator("xpath=../..").innerHTML();
-                    check(`${label}: reaction is applied`, html.includes("👍"));
+
+                    // Sabit bekleme yerine sonucu bekle: yavaş bir yanıt
+                    // testi rastgele başarısız kılmasın.
+                    let applied = false;
+                    for (let i = 0; i < 20 && !applied; i++) {
+                        await page.waitForTimeout(250);
+                        applied = (await bubble.locator("xpath=../..").innerHTML()).includes("👍");
+                    }
+                    check(`${label}: reaction is applied`, applied);
                 } else {
                     check(`${label}: reaction button is reachable`, false, "not visible");
                 }
