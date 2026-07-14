@@ -134,8 +134,7 @@ const Message = ({ message, searchTerm = "", showAvatar = true }) => {
                         <img
                             src={profilePic}
                             alt=''
-                            className='w-8 h-8 rounded-full object-cover'
-                            style={{ border: '1px solid var(--border-subtle)' }}
+                            className='w-8 h-8 avatar-ring'
                         />
                     )}
                 </div>

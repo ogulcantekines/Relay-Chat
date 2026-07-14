@@ -36,10 +36,9 @@ const Conversation = (props) => {
 
   return (
     <div
-      className='flex gap-3 items-center px-3 py-2.5 rounded-xl cursor-pointer transition-colors'
+      className={`flex gap-3 items-center px-3 py-2.5 rounded-xl cursor-pointer transition-colors ${isSelected ? 'tile-active' : ''}`}
       style={{
-        background: isSelected ? 'var(--accent-soft)' : 'transparent',
-        border: `1px solid ${isSelected ? 'var(--accent)' : 'transparent'}`
+        border: `1px solid ${isSelected ? 'var(--border-strong)' : 'transparent'}`
       }}
       onMouseEnter={(e) => {
         if (!isSelected) e.currentTarget.style.background = 'var(--bg-hover)';
@@ -54,8 +53,7 @@ const Conversation = (props) => {
         <img
           src={props.conversation.profilePic}
           alt=''
-          className='w-11 h-11 rounded-full object-cover'
-          style={{ border: '1px solid var(--border-subtle)' }}
+          className={`w-11 h-11 avatar-ring ${isOnline ? 'avatar-ring-online' : ''}`}
         />
         {isOnline && (
           <span

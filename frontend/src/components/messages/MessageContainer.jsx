@@ -106,13 +106,17 @@ const MessageContainer = () => {
     const isOnline = selectedConversation && onlineUsers.includes(selectedConversation._id);
 
     return (
-        <div className="flex flex-col h-full w-full min-w-0" style={{ background: 'var(--bg-base)' }}>
+        <div className="flex flex-col h-full w-full min-w-0 panel-chat">
             {noChatSelected ? <NoChatSelected /> : (<> {/* Sohbet seçilmemişse NoChatSelected, seçilmişse mesaj alanı */}
 
                 {/* ═══════════ HEADER ═══════════ */}
                 <div
-                    className='flex items-center gap-3 px-4 py-2.5 flex-shrink-0'
-                    style={{ borderBottom: '1px solid var(--border-subtle)', background: 'var(--bg-panel)' }}
+                    className='flex items-center gap-3 px-4 py-3 flex-shrink-0 relative header-fade'
+                    style={{
+                        borderBottom: '1px solid var(--border-subtle)',
+                        background: 'linear-gradient(180deg, color-mix(in srgb, var(--bg-panel) 95%, transparent), color-mix(in srgb, var(--bg-panel) 80%, transparent))',
+                        backdropFilter: 'blur(12px)'
+                    }}
                 >
                     {/* Dar ekranda listeye dön */}
                     <button
@@ -128,8 +132,7 @@ const MessageContainer = () => {
                         <img
                             src={selectedConversation.profilePic}
                             alt=''
-                            className='w-10 h-10 rounded-full object-cover'
-                            style={{ border: '1px solid var(--border-subtle)' }}
+                            className={`w-10 h-10 avatar-ring ${isOnline ? 'avatar-ring-online' : ''}`}
                         />
                         {isOnline && (
                             <span
@@ -315,19 +318,38 @@ export default MessageContainer;
 const NoChatSelected = () => {
     const { authUser } = useAuth();
     return (
-        <div className='flex flex-col items-center justify-center w-full h-full gap-3 px-6 text-center'>
-            <div
-                className='w-16 h-16 rounded-2xl flex items-center justify-center text-3xl'
-                style={{ background: 'var(--accent-soft)' }}
-            >
-                <TiMessages style={{ color: 'var(--accent-hover)' }} />
+        <div className='flex flex-col items-center justify-center w-full h-full px-6'>
+            <div className='surface-glass rounded-2xl px-8 py-9 text-center max-w-sm animate-rise'>
+                <div className='w-16 h-16 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-4 brand-badge'>
+                    <TiMessages style={{ color: '#fff' }} />
+                </div>
+
+                <h2 className='text-lg font-semibold mb-1.5' style={{ color: 'var(--text-primary)' }}>
+                    Hoş geldin, {authUser?.fullName?.split(' ')[0] || 'yolcu'} 👋
+                </h2>
+                <p className='text-sm leading-relaxed' style={{ color: 'var(--text-secondary)' }}>
+                    Soldaki listeden bir sohbet seç ya da arkadaş kodunu paylaşarak
+                    yeni biriyle konuşmaya başla.
+                </p>
+
+                {/* Kendi arkadaş kodu: paylaşması kolay olsun */}
+                {authUser?.friendCode && (
+                    <div
+                        className='mt-5 pt-4 flex flex-col items-center gap-1.5'
+                        style={{ borderTop: '1px solid var(--border-subtle)' }}
+                    >
+                        <span className='text-[11px] uppercase tracking-wider' style={{ color: 'var(--text-muted)' }}>
+                            Arkadaş kodun
+                        </span>
+                        <span
+                            className='text-lg font-semibold tracking-[0.3em] px-3 py-1 rounded-lg'
+                            style={{ background: 'var(--accent-soft)', color: 'var(--accent-hover)' }}
+                        >
+                            {authUser.friendCode}
+                        </span>
+                    </div>
+                )}
             </div>
-            <h2 className='text-lg font-semibold' style={{ color: 'var(--text-primary)' }}>
-                Hoş geldin, {authUser?.fullName?.split(' ')[0] || 'yolcu'} 👋
-            </h2>
-            <p className='text-sm max-w-xs' style={{ color: 'var(--text-secondary)' }}>
-                Soldaki listeden bir sohbet seç ya da arkadaş kodunu paylaşarak yeni biriyle konuşmaya başla.
-            </p>
         </div>
     );
 };

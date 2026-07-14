@@ -81,7 +81,7 @@ const Sidebar = () => {
 
     // ═══════════ ANA SIDEBAR GÖRÜNÜMÜ ═══════════
     return (
-        <div className='h-full flex flex-col' style={{ background: 'var(--bg-panel)' }}>
+        <div className='h-full flex flex-col panel-sunken'>
 
             {/* Kullanıcı bilgileri + Arkadaş ekle butonu + Bildirim dropdown */}
             <UserInfo

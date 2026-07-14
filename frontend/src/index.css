@@ -7,11 +7,15 @@
    Renkler tek yerde tanımlı; bileşenler bu değişkenleri kullanır.
    ───────────────────────────────────────────────────────────── */
 :root {
-  --bg-base: #0b0f1a;
-  --bg-panel: #131826;
-  --bg-elevated: #1a2032;
-  --bg-hover: #212942;
-  --border-subtle: #252d42;
+  /* Yüzey katmanları: aşağıdan yukarıya doğru açılır, böylece
+     kenar çubuğu, sohbet alanı ve kartlar birbirinden ayrışır. */
+  --bg-base: #080b14;
+  --bg-sunken: #0c101c;
+  --bg-panel: #111726;
+  --bg-elevated: #182032;
+  --bg-hover: #202943;
+  --border-subtle: #222b41;
+  --border-strong: #2e3956;
 
   --text-primary: #e8ecf5;
   --text-secondary: #9aa4bf;
@@ -21,8 +25,12 @@
   --accent-hover: #818cf8;
   --accent-soft: rgba(99, 102, 241, 0.14);
 
-  --bubble-out: linear-gradient(135deg, #6366f1 0%, #7c3aed 100%);
-  --bubble-in: #232b3f;
+  --accent-glow: rgba(99, 102, 241, 0.38);
+  --bubble-out: linear-gradient(135deg, #6366f1 0%, #8b5cf6 55%, #a855f7 100%);
+  --bubble-in: #1d2437;
+
+  /* Panellerin üstüne binen ince ışık çizgisi: cam hissi verir */
+  --sheen: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0) 40%);
 
   --online: #22c55e;
   --danger: #ef4444;
@@ -32,6 +40,12 @@ html,
 body,
 #root {
   height: 100%;
+}
+
+/* Uygulama, arka plan katmanlarının üstünde çizilir */
+#root {
+  position: relative;
+  z-index: 1;
 }
 
 body {
@@ -52,13 +66,15 @@ body::before {
   content: "";
   position: fixed;
   inset: -20%;
-  z-index: -2;
+  z-index: 0;
+  pointer-events: none;
   background:
-    radial-gradient(38rem 38rem at 15% 20%, rgba(99, 102, 241, 0.28), transparent 62%),
-    radial-gradient(34rem 34rem at 85% 75%, rgba(168, 85, 247, 0.24), transparent 62%),
-    radial-gradient(30rem 30rem at 70% 15%, rgba(14, 165, 233, 0.20), transparent 62%),
-    radial-gradient(26rem 26rem at 25% 85%, rgba(236, 72, 153, 0.16), transparent 62%);
-  filter: blur(40px);
+    radial-gradient(40rem 40rem at 14% 18%, rgba(99, 102, 241, 0.55), transparent 60%),
+    radial-gradient(36rem 36rem at 86% 78%, rgba(168, 85, 247, 0.50), transparent 60%),
+    radial-gradient(32rem 32rem at 72% 12%, rgba(56, 189, 248, 0.38), transparent 60%),
+    radial-gradient(28rem 28rem at 22% 88%, rgba(236, 72, 153, 0.32), transparent 60%);
+  filter: blur(52px);
+  opacity: 0.5;
   animation: drift 28s ease-in-out infinite alternate;
 }
 
@@ -66,7 +82,8 @@ body::after {
   content: "";
   position: fixed;
   inset: 0;
-  z-index: -1;
+  z-index: 0;
+  pointer-events: none;
   background-image:
     linear-gradient(rgba(255, 255, 255, 0.022) 1px, transparent 1px),
     linear-gradient(90deg, rgba(255, 255, 255, 0.022) 1px, transparent 1px);
@@ -103,18 +120,79 @@ body::after {
 
 /* ── Yüzeyler ── */
 .surface {
-  background-color: color-mix(in srgb, var(--bg-panel) 92%, transparent);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid var(--border-subtle);
-  box-shadow: 0 24px 60px -20px rgba(0, 0, 0, 0.65);
+  position: relative;
+  background-color: color-mix(in srgb, var(--bg-panel) 88%, transparent);
+  backdrop-filter: blur(18px) saturate(1.2);
+  -webkit-backdrop-filter: blur(18px) saturate(1.2);
+  border: 1px solid var(--border-strong);
+  box-shadow:
+    0 32px 80px -24px rgba(0, 0, 0, 0.8),
+    0 0 0 1px rgba(255, 255, 255, 0.03) inset;
+}
+
+/* Üst kenarda ışık yansıması */
+.surface::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 120px;
+  background: var(--sheen);
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+/* Kenar çubuğu gövdeden bir ton koyu: iki alan birbirinden ayrışır */
+.panel-sunken {
+  background:
+    linear-gradient(180deg, rgba(8, 11, 20, 0.92), rgba(6, 9, 16, 0.96));
+  box-shadow: inset -1px 0 0 var(--border-subtle);
+}
+
+/* Sohbet alanı: hafif dokulu zemin */
+.panel-chat {
+  position: relative;
+  background:
+    radial-gradient(50rem 32rem at 75% -5%, rgba(99, 102, 241, 0.10), transparent 62%),
+    radial-gradient(40rem 30rem at 10% 105%, rgba(168, 85, 247, 0.07), transparent 62%),
+    linear-gradient(180deg, rgba(22, 29, 46, 0.62), rgba(17, 23, 38, 0.70));
+}
+
+/* Sohbet zemininde ince nokta dokusu: boş alan düz durmasın */
+.panel-chat::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-size: 22px 22px;
+  mask-image: radial-gradient(ellipse 70% 60% at 50% 45%, #000 20%, transparent 95%);
+  -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 45%, #000 20%, transparent 95%);
 }
 
 .surface-glass {
-  background: rgba(19, 24, 38, 0.72);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  position: relative;
+  background: rgba(17, 23, 38, 0.66);
+  backdrop-filter: blur(26px) saturate(1.3);
+  -webkit-backdrop-filter: blur(26px) saturate(1.3);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  box-shadow:
+    0 36px 90px -28px rgba(0, 0, 0, 0.9),
+    0 0 0 1px rgba(255, 255, 255, 0.04) inset;
+}
+.surface-glass::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 40%;
+  background: var(--sheen);
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+/* Marka rozeti: parlayan yuvarlak */
+.brand-badge {
+  background: var(--bubble-out);
+  box-shadow: 0 10px 30px -8px var(--accent-glow);
 }
 
 /* ── Form alanları ── */
@@ -205,11 +283,40 @@ body::after {
   background: var(--bubble-out);
   color: #fff;
   border-bottom-right-radius: 0.3rem;
+  box-shadow: 0 6px 18px -6px var(--accent-glow);
 }
 .bubble-in {
   background: var(--bubble-in);
   color: var(--text-primary);
+  border: 1px solid var(--border-subtle);
   border-bottom-left-radius: 0.3rem;
+  box-shadow: 0 4px 14px -8px rgba(0, 0, 0, 0.7);
+}
+
+/* Avatar: ince halka, çevrimiçi olanlarda renkli */
+.avatar-ring {
+  border-radius: 9999px;
+  box-shadow: 0 0 0 1px var(--border-strong);
+  object-fit: cover;
+}
+.avatar-ring-online {
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--online) 55%, transparent);
+}
+
+/* Liste öğesi: seçiliyken sol kenarda vurgu çizgisi */
+.tile-active {
+  position: relative;
+  background: linear-gradient(90deg, var(--accent-soft), transparent 70%);
+}
+.tile-active::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 18%;
+  bottom: 18%;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--bubble-out);
 }
 
 /* ── Animasyonlar ── */
@@ -255,6 +362,18 @@ textarea,
 }
 
 /* Arama sonucu vurgusu */
+/* Sohbet başlığı altında yumuşak ayırıcı */
+.header-fade {
+  position: relative;
+}
+.header-fade::after {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; bottom: -1px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--border-strong) 20%, var(--border-strong) 80%, transparent);
+}
+
 mark.hit {
   background: rgba(250, 204, 21, 0.32);
   color: inherit;

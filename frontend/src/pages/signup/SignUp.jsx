@@ -44,8 +44,7 @@ const SignUp = () => {
 
                 <div className='flex flex-col items-center gap-2 mb-6'>
                     <div
-                        className='w-12 h-12 rounded-2xl flex items-center justify-center text-2xl'
-                        style={{ background: 'var(--bubble-out)' }}
+                        className='w-14 h-14 rounded-2xl flex items-center justify-center text-2xl brand-badge'
                     >
                         💬
                     </div>
