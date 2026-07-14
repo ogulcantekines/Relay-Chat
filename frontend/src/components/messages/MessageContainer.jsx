@@ -179,8 +179,7 @@ const MessageContainer = () => {
                     <button
                         onClick={handleClearChat}
                         disabled={loading}
-                        className='w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 text-sm'
-                        style={{ background: 'var(--bg-elevated)', color: 'var(--text-secondary)' }}
+                        className='w-9 h-9 icon-btn flex-shrink-0 text-sm'
                         title='Sohbeti temizle'
                     >
                         {loading ? '...' : '🗑️'}

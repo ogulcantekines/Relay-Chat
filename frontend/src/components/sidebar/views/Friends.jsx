@@ -11,10 +11,10 @@ import useSocket from "../../../zustand/useSocket";
 import useConversation from "../../../zustand/useConversation";
 
 // Friends Bileşeni - Arkadaş yönetim sayfası
-// Sidebar'daki "Friends" butonuna basıldığında gösterilir.
+// Sidebar'daki "Arkadaşlar" butonuna basıldığında gösterilir.
 // 3 ana sekme içerir:
-// 1. All → Mevcut arkadaş listesi (mesaj gönder, arkadaştan çıkar)
-// 2. Pending → Gelen ve gönderilen arkadaşlık istekleri (kabul/red/iptal)
+// 1. Tümü → Mevcut arkadaş listesi (mesaj gönder, arkadaştan çıkar)
+// 2. Bekleyen → Gelen ve gönderilen arkadaşlık istekleri (kabul/red/iptal)
 //
 // Props:
 // - onBack: Ana sidebar'a dönmek için çağrılan fonksiyon
@@ -47,8 +47,7 @@ const Friends = ({ onBack, initialTab }) => {
                 {/* Geri butonu → onBack prop'u ile ana sidebar'a döner */}
                 <button
                     onClick={onBack}
-                    className="w-9 h-9 rounded-lg flex items-center justify-center transition-colors"
-                    style={{ background: 'var(--bg-elevated)', color: 'var(--text-secondary)' }}
+                    className="w-9 h-9 icon-btn transition-colors"
                 >
                     <IoArrowBack />
                 </button>
@@ -90,25 +89,29 @@ const Friends = ({ onBack, initialTab }) => {
             {/* ═══════════ PENDING ALT SEKMELERI ═══════════ */}
             {/* Sadece Pending sekmesi aktifken göster */}
             {activeTab === "pending" && (
-                <div className="px-4 py-2 bg-gray-850 border-b border-[color:var(--border-subtle)]">
+                <div className="px-4 py-2" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
                     <div className="flex gap-3">
                         <button
                             onClick={() => setPendingSubTab("incoming")}
-                            className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${pendingSubTab === "incoming"
-                                ? "" : ""
-                                }`}
-                                style={{ background: 'var(--bg-elevated)', color: 'var(--text-secondary)' }}
+                            className='px-3 py-1.5 rounded-lg text-sm font-medium transition-colors'
+                            style={{
+                                background: pendingSubTab === "incoming" ? 'var(--accent-soft)' : 'var(--bg-elevated)',
+                                color: pendingSubTab === "incoming" ? 'var(--accent-hover)' : 'var(--text-secondary)',
+                                border: `1px solid ${pendingSubTab === "incoming" ? 'var(--accent)' : 'transparent'}`
+                            }}
                         >
-                            Incoming ({incomingFriendRequests.length})
+                            Gelen ({incomingFriendRequests.length})
                         </button>
                         <button
                             onClick={() => setPendingSubTab("outgoing")}
-                            className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${pendingSubTab === "outgoing"
-                                ? "" : ""
-                                }`}
-                                style={{ background: 'var(--bg-elevated)', color: 'var(--text-secondary)' }}
+                            className='px-3 py-1.5 rounded-lg text-sm font-medium transition-colors'
+                            style={{
+                                background: pendingSubTab === "outgoing" ? 'var(--accent-soft)' : 'var(--bg-elevated)',
+                                color: pendingSubTab === "outgoing" ? 'var(--accent-hover)' : 'var(--text-secondary)',
+                                border: `1px solid ${pendingSubTab === "outgoing" ? 'var(--accent)' : 'transparent'}`
+                            }}
                         >
-                            Outgoing ({sentFriendRequests.length})
+                            Giden ({sentFriendRequests.length})
                         </button>
                     </div>
                 </div>
@@ -126,7 +129,7 @@ const Friends = ({ onBack, initialTab }) => {
 
                         {loading ? (
                             <div className="flex justify-center py-8">
-                                <span className="loading loading-spinner loading-md"></span>
+                                <span className="w-5 h-5 border-2 rounded-full animate-spin" style={{ borderColor: 'var(--border-subtle)', borderTopColor: 'var(--accent)' }} />
                             </div>
                         ) : friends.length === 0 ? (
                             <div className="text-center py-8 text-sm" style={{ color: 'var(--text-muted)' }}>
@@ -169,7 +172,7 @@ const Friends = ({ onBack, initialTab }) => {
                                                     setSelectedConversation(friend);
                                                     onBack(); // Friends sayfasından çık
                                                 }}
-                                                className="w-9 h-9 rounded-lg flex items-center justify-center transition-colors btn-primary-grad p-0"
+                                                className="w-10 h-10 rounded-xl flex items-center justify-center text-base btn-primary-grad p-0 flex-shrink-0"
                                                 title="Mesaj gönder"
                                             >
                                                 <FiMessageSquare />
@@ -178,7 +181,8 @@ const Friends = ({ onBack, initialTab }) => {
                                             <button
                                                 onClick={() => handleRemoveFriend(friend._id)}
                                                 disabled={removingFriend}
-                                                className="p-2 bg-red-500 hover:bg-red-600 rounded-lg transition-colors disabled:opacity-50"
+                                                className="w-10 h-10 rounded-xl flex items-center justify-center text-base transition-colors disabled:opacity-50 flex-shrink-0"
+                                                style={{ background: 'color-mix(in srgb, var(--danger) 18%, transparent)', color: 'var(--danger)', border: '1px solid color-mix(in srgb, var(--danger) 35%, transparent)' }}
                                                 title="Arkadaşlıktan çıkar"
                                             >
                                                 <FiUserMinus />
@@ -199,16 +203,16 @@ const Friends = ({ onBack, initialTab }) => {
                         {pendingSubTab === "incoming" && (
                             <>
                                 <h3 className="text-xs font-semibold mb-2.5">
-                                    Incoming Requests ({incomingFriendRequests.length})
+                                    Gelen istekler ({incomingFriendRequests.length})
                                 </h3>
 
                                 {loadingIncoming ? (
                                     <div className="flex justify-center py-8">
-                                        <span className="loading loading-spinner loading-md"></span>
+                                        <span className="w-5 h-5 border-2 rounded-full animate-spin" style={{ borderColor: 'var(--border-subtle)', borderTopColor: 'var(--accent)' }} />
                                     </div>
                                 ) : incomingFriendRequests.length === 0 ? (
                                     <div className="text-center py-8 text-sm" style={{ color: 'var(--text-muted)' }}>
-                                        No incoming requests
+                                        Gelen istek yok
                                     </div>
                                 ) : (
                                     // request.senderId → populate edilmiş, tam kullanıcı objesi
@@ -242,7 +246,8 @@ const Friends = ({ onBack, initialTab }) => {
                                                 <button
                                                     onClick={() => respondToRequest(request._id, "reject")}
                                                     disabled={responding}
-                                                    className="p-2 bg-red-500 hover:bg-red-600 rounded-lg transition-colors disabled:opacity-50"
+                                                    className="w-10 h-10 rounded-xl flex items-center justify-center text-base transition-colors disabled:opacity-50 flex-shrink-0"
+                                                style={{ background: 'color-mix(in srgb, var(--danger) 18%, transparent)', color: 'var(--danger)', border: '1px solid color-mix(in srgb, var(--danger) 35%, transparent)' }}
                                                     title="Reddet"
                                                 >
                                                     <FiX className="text-white" />
@@ -258,16 +263,16 @@ const Friends = ({ onBack, initialTab }) => {
                         {pendingSubTab === "outgoing" && (
                             <>
                                 <h3 className="text-xs font-semibold mb-2.5">
-                                    Outgoing Requests ({sentFriendRequests.length})
+                                    Gönderilen istekler ({sentFriendRequests.length})
                                 </h3>
 
                                 {loadingOutgoing ? (
                                     <div className="flex justify-center py-8">
-                                        <span className="loading loading-spinner loading-md"></span>
+                                        <span className="w-5 h-5 border-2 rounded-full animate-spin" style={{ borderColor: 'var(--border-subtle)', borderTopColor: 'var(--accent)' }} />
                                     </div>
                                 ) : sentFriendRequests.length === 0 ? (
                                     <div className="text-center py-8 text-sm" style={{ color: 'var(--text-muted)' }}>
-                                        No outgoing requests
+                                        Gönderilen istek yok
                                     </div>
                                 ) : (
                                     // request.receiverId → populate edilmiş, tam kullanıcı objesi

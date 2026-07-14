@@ -198,7 +198,7 @@ const Message = ({ message, searchTerm = "", showAvatar = true }) => {
                     {showPicker && (
                         <div
                             className={`absolute z-20 bottom-full mb-1.5 ${fromMe ? 'right-0' : 'left-0'}
-                                        flex gap-1 p-1.5 rounded-xl shadow-xl max-w-[90vw] flex-wrap`}
+                                        flex gap-1 p-1.5 rounded-xl shadow-xl max-w-[90vw] flex-wrap animate-pop`}
                             style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)' }}
                         >
                             {REACTIONS.map(emoji => (
@@ -226,7 +226,7 @@ const Message = ({ message, searchTerm = "", showAvatar = true }) => {
                                 <button
                                     key={emoji}
                                     onClick={() => react(message._id, emoji)}
-                                    className='flex items-center gap-1 px-1.5 py-0.5 rounded-full text-xs transition-colors'
+                                    className='flex items-center gap-1 px-1.5 py-0.5 rounded-full text-xs animate-pop'
                                     style={{
                                         background: mine ? 'var(--accent-soft)' : 'var(--bg-elevated)',
                                         border: `1px solid ${mine ? 'var(--accent)' : 'var(--border-subtle)'}`,

@@ -29,7 +29,7 @@ const Requests = () => {
                 <div className="p-8 text-center text-[color:var(--text-muted)]">
                     <p className="text-lg mb-2">Bekleyen mesaj isteği yok</p>
                     <p className="text-sm">
-                        Message requests from non-friends <br />
+                        Arkadaşın olmayan kişilerden gelen mesaj istekleri <br />
                         will appear here
                     </p>
                 </div>

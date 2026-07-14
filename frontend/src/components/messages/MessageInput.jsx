@@ -71,8 +71,7 @@ const MessageInput = () => {
                 <button
                     type='button'
                     onClick={() => setShowEmoji(v => !v)}
-                    className='w-10 h-10 rounded-xl flex items-center justify-center text-lg transition-colors'
-                    style={{ background: 'var(--bg-elevated)', color: 'var(--text-secondary)' }}
+                    className='w-10 h-10 icon-btn text-lg transition-colors'
                     title='Emoji ekle'
                 >
                     🙂
@@ -80,7 +79,7 @@ const MessageInput = () => {
 
                 {showEmoji && (
                     <div
-                        className='absolute bottom-full left-0 mb-2 z-30 grid grid-cols-6 gap-1 p-2 rounded-xl shadow-xl'
+                        className='absolute bottom-full left-0 mb-2 z-30 grid grid-cols-6 gap-1 p-2 rounded-xl shadow-xl animate-pop'
                         style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)', width: '15rem' }}
                     >
                         {QUICK_EMOJIS.map(e => (

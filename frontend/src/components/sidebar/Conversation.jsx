@@ -98,7 +98,7 @@ const Conversation = (props) => {
           {/* Okunmamış mesaj rozeti */}
           {unread > 0 && (
             <span
-              className='flex-shrink-0 min-w-[20px] h-5 px-1.5 rounded-full text-[11px] font-semibold flex items-center justify-center'
+              className='flex-shrink-0 min-w-[20px] h-5 px-1.5 rounded-full text-[11px] font-semibold flex items-center justify-center animate-badge'
               style={{ background: 'var(--accent)', color: '#fff' }}
             >
               {unread > 99 ? '99+' : unread}

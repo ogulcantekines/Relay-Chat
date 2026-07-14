@@ -108,7 +108,7 @@ const AddFriend = ({ onBack }) => {
                         </div>
                         <h3 className="text-white font-semibold mb-2">Arkadaş ara</h3>
                         <p className="text-sm text-[color:var(--text-muted)]">
-                            Search for friends by username or friend code
+                            Kullanıcı adı veya arkadaş koduyla arkadaş ara
                         </p>
                     </div>
                 )}
