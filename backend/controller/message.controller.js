@@ -98,13 +98,19 @@ export const getMessage = async (req, res) => {
 
         const conversation = await Conversation.findOne({
             participants: { $all: [senderId, userToChatId] }
-        }).populate("messages"); // conversation içindeki messages, normalde referans ettiği Message ye yani messages collectionına referans bilgisini ve id bilgisini tutar.
-        //populate ise eğer id bilgisi referans aldığı collectionda varsa o nesneyi ve tüm propertylerini getirir
+        }).populate({
+            path: "messages",
+            // Bu kullanıcı sohbeti temizlediyse, temizlemeden önceki mesajlar
+            // ona gösterilmez. Kayıtlar durduğu için karşı tarafın geçmişi
+            // etkilenmez.
+            match: { clearedBy: { $ne: senderId } }
+        });
 
         if (!conversation) {
             return res.status(200).json([]);
         }
 
+        // populate match'i eşleşmeyenleri ayıklar; kalanlar bu kullanıcının görebildikleri
         const messages = conversation.messages;
         res.status(200).json(messages);
 
@@ -120,49 +126,62 @@ export const clearConversation = async (req, res) => {
         const { id: userToChatId } = req.params; // url deki :id yi alıp userToChatId ye ata
         const senderId = req.userId; // protectRoute middleware den gelen userId (giriş yapan kullanıcı)
 
-        const conversation = await Conversation.findOne({ // conversations collectionında senderId ve userToChatId yi içeren konuşmayı bul
-            participants: { $all: [senderId, userToChatId] } //$all operatörü ile her iki kullanıcıyı da içeren belgeyi bul,sırası önemli değil
+        const conversation = await Conversation.findOne({ // her iki kullanıcıyı da içeren konuşmayı bul
+            participants: { $all: [senderId, userToChatId] }
         });
 
-        if (!conversation) { //conversation yoksa silinecek bir şey yok
+        if (!conversation) { //conversation yoksa temizlenecek bir şey yok
             return res.status(404).json({ error: "Conversation not found" });
         }
-        if (conversation.messages.length === 0) { // zaten mesaj yoksa silinecek bir şey yok
-            return res.status(200).json({ message: "No messages to delete" });
-        }
 
-        // ✅ Silinen mesaj sayısını ÖNCEden kaydet!
-        const deletedCount = conversation.messages.length;
-
-        await Message.deleteMany({//deleteMany ile conversation içindeki tüm mesajları sil
-            _id: { $in: conversation.messages } //conversation.messages bu kısım messages arrayi içindeki tüm id leri alıyor
-        }); // $in operatörü, bir alanın değerinin belirli bir dizi içinde olup olmadığını kontrol eder
-        //messages koleksiyonunda _id si conversation içindeki messages arrayinde olan tüm mesajları siler çünkü conversations koleksiyonunda
-        // sadece mesajların id leri tutuluyor, mesajların kendisi değil _id messages koleksiyonunun idsine denk geliyor
-
-        conversation.messages = []; // conversation içindeki messages arrayini boşalt
-
-        // Eğer bu bir pending (bekleyen) konuşma ise, konuşmayı tamamen dbeden sil (çöp olmasın)
+        // Bekleyen istek reddediliyor demektir: henüz kabul edilmemiş bir
+        // sohbetin kalıcı olmasının anlamı yok, iki taraftan da kaldırılır.
         if (conversation.status === "pending") {
+            const deletedCount = conversation.messages.length;
+            await Message.deleteMany({ _id: { $in: conversation.messages } });
             await Conversation.findByIdAndDelete(conversation._id);
             return res.status(200).json({
                 message: "Pending request deleted completely",
-                deletedCount: deletedCount
+                deletedCount
             });
         }
 
-        await conversation.save();//db ye kaydet
+        // ═══ YALNIZCA BU KULLANICI İÇİN TEMİZLE ═══
+        // Mesajlar silinmiyor, yalnızca clearedBy listesine bu kullanıcı ekleniyor.
+        // $addToSet aynı kullanıcının iki kez eklenmesini engeller.
+        const result = await Message.updateMany(
+            {
+                _id: { $in: conversation.messages },
+                clearedBy: { $ne: senderId }
+            },
+            { $addToSet: { clearedBy: senderId } }
+        );
+
+        // Her iki taraf da temizlediyse mesajlar artık kimseye görünmüyor;
+        // veritabanında tutmanın anlamı kalmadığı için kalıcı olarak silinir.
+        const orphaned = await Message.find({
+            _id: { $in: conversation.messages },
+            clearedBy: { $all: conversation.participants }
+        }).select("_id");
+
+        if (orphaned.length > 0) {
+            const ids = orphaned.map(m => m._id);
+            await Message.deleteMany({ _id: { $in: ids } });
+            conversation.messages = conversation.messages.filter(
+                id => !ids.some(o => o.equals(id))
+            );
+            await conversation.save();
+        }
 
         res.status(200).json({
             message: "Conversation cleared",
-            deletedCount: deletedCount  // ✅ Önceden kaydedilen değeri kullan!
+            deletedCount: result.modifiedCount
         });
     }
     catch (error) {
         console.error("Error clearing conversation:", error);
         res.status(500).json({ error: "Internal Server Error" });
     }
-
 };
 
 // mesaj düzenleme fonksiyonu
@@ -292,7 +311,9 @@ export const getUnreadCounts = async (req, res) => {
             {
                 $match: {
                     receiverId: new mongoose.Types.ObjectId(userId),
-                    isRead: false
+                    isRead: false,
+                    // Kullanıcının temizlediği mesajlar okunmamış sayılmaz
+                    clearedBy: { $ne: new mongoose.Types.ObjectId(userId) }
                 }
             },
             {

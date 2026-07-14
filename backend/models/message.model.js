@@ -32,6 +32,15 @@ const messageSchema = new mongoose.Schema({
         default: false
     },
 
+    // Sohbeti temizleyen kullanıcılar.
+    // Mesaj veritabanından silinmez; yalnızca burada adı geçen kullanıcılara
+    // gösterilmez. Böylece bir taraf sohbetini temizlediğinde karşı tarafın
+    // geçmişi olduğu gibi kalır (WhatsApp/Telegram davranışı).
+    clearedBy: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User"
+    }],
+
     // Emoji tepkileri: her kullanıcı bir mesaja tek tepki bırakabilir
     reactions: [{
         userId: {
@@ -60,6 +69,7 @@ const messageSchema = new mongoose.Schema({
 // - okunmamış mesajları işaretleme/sayma: { senderId, receiverId, isRead }
 // - sohbeti tarihe göre sıralama: { timestamp }
 messageSchema.index({ senderId: 1, receiverId: 1, isRead: 1 });
+messageSchema.index({ clearedBy: 1 });
 messageSchema.index({ timestamp: -1 });
 
 const Message = mongoose.model("Message", messageSchema);

@@ -11,6 +11,8 @@ export const getConversations = async (req, res) => {
             .populate("participants", "fullName username profilePic friendCode") //participantsı populate et, burada idlerin tutulduğunu ve users collectionına referans oldugunu bilerek sifre dısındaki degerleri getirerek nesneyi cagir
             .populate({ //burada da messagesi populate var burada da sadece idleri tutuluyor. ana referans ettigi messages collectionından nesne hallerini getir
                 path: "messages",
+                // Kullanıcının temizlediği mesajlar önizlemede görünmemeli
+                match: { clearedBy: { $ne: userId } },
                 options: { sort: { createdAt: -1 }, limit: 1 }
             })//ama burada secenek kısmında oluşturulma tarihine göre descending, desc , -1 gibi terimler kullanarak yeniden eskiye dogru sıralanır. limit ile de kac tane secilecegini belirler
             .sort({ updatedAt: -1 });//burada da find array dondugunden her bir conv buyuk bir nesneyi temsil eder. userıdinin katıldığı kac conversation varsa arrayde yazılır
@@ -41,6 +43,8 @@ export const getConversationsByStatus = async (req, res) => {
             .populate("participants", "fullName username profilePic friendCode")
             .populate({
                 path: "messages",
+                // Kullanıcının temizlediği mesajlar önizlemede görünmemeli
+                match: { clearedBy: { $ne: userId } },
                 options: { sort: { createdAt: -1 }, limit: 1 }
             })
             .sort({ updatedAt: -1 });

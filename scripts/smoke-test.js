@@ -280,6 +280,31 @@ async function run() {
         const countBody = await counts.json();
         check("unread counts are returned per sender", counts.status === 200 && typeof countBody === "object");
 
+        console.log("\nClearing a conversation");
+        // Temizleme yalnızca temizleyeni etkilemeli; karşı tarafın geçmişi kalmalı
+        await api(`/api/messages/send/${bId}`, {
+            method: "POST", cookie: cookieA, body: { message: "kept for the other side" }
+        });
+
+        const beforeClear = await (await api(`/api/messages/${bId}`, { cookie: cookieA })).json();
+        check("sender sees the thread before clearing", beforeClear.length > 0);
+
+        const cleared = await api(`/api/messages/clear/${bId}`, { method: "DELETE", cookie: cookieA });
+        check("clear succeeds", cleared.status === 200, `got ${cleared.status}`);
+
+        const afterA = await (await api(`/api/messages/${bId}`, { cookie: cookieA })).json();
+        check("thread is empty for the person who cleared", afterA.length === 0, `got ${afterA.length}`);
+
+        const afterB = await (await api(`/api/messages/${aId}`, { cookie: cookieB })).json();
+        check("the other side keeps its history", afterB.length > 0, `got ${afterB.length}`);
+
+        // Temizlikten sonra gelen mesajlar yine iki tarafta da görünmeli
+        await api(`/api/messages/send/${bId}`, {
+            method: "POST", cookie: cookieA, body: { message: "after clearing" }
+        });
+        const freshA = await (await api(`/api/messages/${bId}`, { cookie: cookieA })).json();
+        check("new messages appear again after clearing", freshA.length === 1, `got ${freshA.length}`);
+
         const conversations = await api("/api/conversations", { cookie: cookieA });
         const convList = await conversations.json();
         check("conversation was created", Array.isArray(convList) && convList.length >= 1);
