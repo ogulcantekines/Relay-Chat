@@ -24,6 +24,11 @@ Users register, find each other by username or a short friend code, send friend 
 - Send, accept, reject and cancel friend requests
 - Friend list with remove support
 
+**Security**
+- Content security policy and hardened headers via helmet
+- Rate limited authentication, keyed per account
+- Passwords hashed with bcrypt, session in an httpOnly cookie
+
 **Messaging**
 - One-to-one conversations, persisted in MongoDB
 - Real-time delivery over Socket.IO
@@ -257,14 +262,19 @@ changes — together with the authorization and validation rules around
 them. It currently runs 32 checks.
 
 ```bash
-npm test            # HTTP smoke test, 36 checks
+npm test                # HTTP smoke test, 36 checks
 npm run test:realtime   # socket delivery, 8 checks
-npm run test:all        # both
+npm run test:ui         # real browser, desktop and mobile, 17 checks
+npm run test:all        # all three
 ```
+
+The browser test needs Chromium once: `npx playwright install chromium`.
 
 The real-time test connects two actual Socket.IO clients and asserts that
 friend requests, messages, typing, reactions and deletions reach the other
-side — the HTTP test alone cannot show that.
+side. The UI test drives a real browser and checks what a person would:
+that nothing overflows, no icon covers an input's text, the console stays
+clean and reactions can be applied by clicking them.
 
 Both need a reachable `MONGO_URI`. They use Node's built-in fetch, so no
 test framework is required.
@@ -276,7 +286,7 @@ Every push and pull request to `main` runs three jobs:
 | Job              | What it checks                                        |
 |------------------|-------------------------------------------------------|
 | `lint-and-build` | Frontend lints cleanly and builds                      |
-| `api-test`       | Smoke and real-time tests pass against a MongoDB container |
+| `api-test`       | API, socket and browser tests against a MongoDB container |
 | `docker`         | Image builds, starts and serves the health endpoint    |
 
 A separate security workflow runs CodeQL analysis, `npm audit` on both
