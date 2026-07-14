@@ -35,7 +35,7 @@ jobs:
         working-directory: frontend
 
   api-test:
-    name: API smoke test
+    name: API, socket and UI tests
     runs-on: ubuntu-latest
 
     services:
@@ -73,6 +73,23 @@ jobs:
           MONGO_URI: mongodb://127.0.0.1:27017/ci_realtime
           JWT_SECRET: ci_test_secret_not_used_in_production
           PORT: 5001
+
+      # Arayüz testi gerçek bir tarayıcı sürdüğü için derlenmiş frontend'e
+      # ve Chromium'a ihtiyaç duyar.
+      - name: Build frontend for the UI test
+        run: npm ci && npm run build
+        working-directory: frontend
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Run browser UI test
+        run: node scripts/ui-test.js
+        env:
+          MONGO_URI: mongodb://127.0.0.1:27017/ci_ui
+          JWT_SECRET: ci_test_secret_not_used_in_production
+          NODE_ENV: production
+          PORT: 5002
 
   docker:
     name: Docker image
