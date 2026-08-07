@@ -172,17 +172,18 @@ const Friends = ({ onBack, initialTab }) => {
                                                     setSelectedConversation(friend);
                                                     onBack(); // Friends sayfasından çık
                                                 }}
-                                                className="w-10 h-10 rounded-xl flex items-center justify-center text-base btn-primary-grad p-0 flex-shrink-0"
+                                                className="btn-primary-grad flex items-center gap-1.5 px-3 py-2 text-xs flex-shrink-0"
                                                 title="Mesaj gönder"
                                             >
-                                                <FiMessageSquare />
+                                                <FiMessageSquare className="text-sm" />
+                                                Mesaj
                                             </button>
                                             {/* Arkadaştan çıkar */}
                                             <button
                                                 onClick={() => handleRemoveFriend(friend._id)}
                                                 disabled={removingFriend}
-                                                className="w-10 h-10 rounded-xl flex items-center justify-center text-base transition-colors disabled:opacity-50 flex-shrink-0"
-                                                style={{ background: 'color-mix(in srgb, var(--danger) 18%, transparent)', color: 'var(--danger)', border: '1px solid color-mix(in srgb, var(--danger) 35%, transparent)' }}
+                                                className="w-9 h-9 rounded-xl flex items-center justify-center text-sm disabled:opacity-50 flex-shrink-0"
+                                                style={{ background: 'color-mix(in srgb, var(--danger) 14%, transparent)', color: 'var(--danger)', border: '1px solid color-mix(in srgb, var(--danger) 30%, transparent)' }}
                                                 title="Arkadaşlıktan çıkar"
                                             >
                                                 <FiUserMinus />
@@ -246,8 +247,8 @@ const Friends = ({ onBack, initialTab }) => {
                                                 <button
                                                     onClick={() => respondToRequest(request._id, "reject")}
                                                     disabled={responding}
-                                                    className="w-10 h-10 rounded-xl flex items-center justify-center text-base transition-colors disabled:opacity-50 flex-shrink-0"
-                                                style={{ background: 'color-mix(in srgb, var(--danger) 18%, transparent)', color: 'var(--danger)', border: '1px solid color-mix(in srgb, var(--danger) 35%, transparent)' }}
+                                                    className="w-9 h-9 rounded-xl flex items-center justify-center text-sm disabled:opacity-50 flex-shrink-0"
+                                                style={{ background: 'color-mix(in srgb, var(--danger) 14%, transparent)', color: 'var(--danger)', border: '1px solid color-mix(in srgb, var(--danger) 30%, transparent)' }}
                                                     title="Reddet"
                                                 >
                                                     <FiX className="text-white" />

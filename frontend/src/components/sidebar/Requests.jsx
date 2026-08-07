@@ -29,8 +29,8 @@ const Requests = () => {
                 <div className="p-8 text-center text-[color:var(--text-muted)]">
                     <p className="text-lg mb-2">Bekleyen mesaj isteği yok</p>
                     <p className="text-sm">
-                        Arkadaşın olmayan kişilerden gelen mesaj istekleri <br />
-                        will appear here
+                        Arkadaşın olmayan kişilerden gelen<br />
+                        mesaj istekleri burada görünür
                     </p>
                 </div>
             ) : (
@@ -40,7 +40,7 @@ const Requests = () => {
                     {messageRequests.length > 0 && (
                         <div>
                             <h3 className="text-sm font-semibold text-[color:var(--text-muted)] px-3 py-2">
-                                Message Requests ({messageRequests.length})
+                                Mesaj istekleri ({messageRequests.length})
                             </h3>
                             <div className="space-y-2">
                                 {/* Her bir mesaj isteği için kart render et */}
