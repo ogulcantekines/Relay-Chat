@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { FaUserPlus, FaBell, FaUserFriends } from "react-icons/fa";
+import { IoSettingsOutline } from "react-icons/io5";
+import SettingsModal from "../modals/SettingsModal";
 import { BiMessageSquareDetail } from "react-icons/bi";
 import useAuth from "../../zustand/useAuth";
 import useFriendStore from "../../zustand/useFriend";
@@ -13,11 +15,11 @@ const formatTimestamp = (timestamp) => {
     const diffInHours = Math.floor(diffInMinutes / 60);
     const diffInDays = Math.floor(diffInHours / 24);
 
-    if (diffInMinutes < 1) return "just now";
-    if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
-    if (diffInHours < 24) return `${diffInHours}h ago`;
-    if (diffInDays < 7) return `${diffInDays}d ago`;
-    return date.toLocaleDateString();
+    if (diffInMinutes < 1) return "az önce";
+    if (diffInMinutes < 60) return `${diffInMinutes} dk önce`;
+    if (diffInHours < 24) return `${diffInHours} sa önce`;
+    if (diffInDays < 7) return `${diffInDays} gün önce`;
+    return date.toLocaleDateString("tr-TR");
 };
 
 const UserInfo = ({ onAddFriendClick, onNotificationClick }) => { // onAddFriendClick ve onNotificationClick propsları Sidebar.jsx dosyasından gelir constr
@@ -26,6 +28,7 @@ const UserInfo = ({ onAddFriendClick, onNotificationClick }) => { // onAddFriend
     const authUser = useAuth((state) => state.authUser);
     const { incomingFriendRequests, messageRequests } = useFriendStore();
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+    const [showSettings, setShowSettings] = useState(false);
     const dropdownRef = useRef(null);
 
     const totalNotifications = incomingFriendRequests.length + messageRequests.length;
@@ -83,13 +86,17 @@ const UserInfo = ({ onAddFriendClick, onNotificationClick }) => { // onAddFriend
             <div className="flex items-center justify-between">
 
                 {/* sol: Kullanıcı Bilgisi */}
-                <div className="flex items-center gap-3">
-                    <img src={authUser?.profilePic} alt="" className="w-12 h-12 rounded-full" />
-                    <div>
-                        <p className="font-bold text-white">
-                            {authUser?.username}</p>
-                        <p className="text-xs text-[color:var(--text-muted)]">
-                            #{authUser?.friendCode}</p>
+                <div className="flex items-center gap-3 min-w-0">
+                    <img src={authUser?.profilePic} alt="" className="w-11 h-11 avatar-ring flex-shrink-0" />
+                    <div className="min-w-0">
+                        {/* Görünen ad birincil: ayarlardan değiştirilebilen budur.
+                            Kullanıcı adı ve arkadaş kodu altında ikincil olarak durur. */}
+                        <p className="font-semibold text-sm truncate" style={{ color: 'var(--text-primary)' }}>
+                            {authUser?.fullName}
+                        </p>
+                        <p className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>
+                            @{authUser?.username} · #{authUser?.friendCode}
+                        </p>
                     </div>
                 </div>
 
@@ -98,22 +105,31 @@ const UserInfo = ({ onAddFriendClick, onNotificationClick }) => { // onAddFriend
                     {/* Arkadaş Ekle */}
                     <button
                         onClick={onAddFriendClick} // Tıklayınca Sidebar'daki setView("addFriend") fonksiyonunu çağır
-                        className="btn btn-sm bg-[color:var(--accent)] hover:bg-[color:var(--accent-hover)] border-none text-white"
-                        title="Arkadaş Ekle"
+                        className="w-9 h-9 rounded-xl flex items-center justify-center btn-primary-grad p-0"
+                        title="Arkadaş ekle"
                     >
-                        <FaUserPlus />
+                        <FaUserPlus className="text-sm" />
+                    </button>
+
+                    {/* Hesap ayarları */}
+                    <button
+                        onClick={() => setShowSettings(true)}
+                        className="w-9 h-9 icon-btn"
+                        title="Hesap ayarları"
+                    >
+                        <IoSettingsOutline />
                     </button>
 
                     {/* Bildirimler */}
                     <div className="relative" ref={dropdownRef}>
                         <button
                             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                            className="btn btn-sm btn-ghost relative"
+                            className="w-9 h-9 icon-btn relative"
                             title="Bildirimler"
                         >
-                            <FaBell className="text-white" />
+                            <FaBell />
                             {totalNotifications > 0 && (
-                                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] rounded-full w-5 h-5 flex items-center justify-center animate-badge">
                                     {totalNotifications}
                                 </span>
                             )}
@@ -196,6 +212,8 @@ const UserInfo = ({ onAddFriendClick, onNotificationClick }) => { // onAddFriend
                     </div>
                 </div>
             </div>
+
+            {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
         </div>
     );
 };

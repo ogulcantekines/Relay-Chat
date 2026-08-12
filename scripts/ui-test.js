@@ -60,6 +60,9 @@ async function signUp(browser, width, height, who) {
         const text = m.text();
         // Eksik favicon gibi varlık 404'leri uygulamanın doğruluğunu etkilemez
         if (/favicon|\.ico|\.png|\.svg|\.mp3/i.test(text)) return;
+        // React'in "javascript: URL engellendi" uyarısı korumanın çalıştığını
+        // gösterir; testin kendi girdiği kötü adresten kaynaklanır.
+        if (/javascript:|React has blocked/i.test(text)) return;
         errors.push(text.slice(0, 120));
     });
 
@@ -204,6 +207,32 @@ async function run() {
                 } else {
                     check(`${label}: reaction button is reachable`, false, "not visible");
                 }
+            }
+
+            // Hesap ayarları: açılıyor, kaydediyor, kötü avatar adresini reddediyor
+            const settingsButton = page.locator('[title="Hesap ayarları"]');
+            if (await settingsButton.isVisible().catch(() => false)) {
+                await settingsButton.click();
+                await page.waitForTimeout(600);
+                check(`${label}: settings open`, await page.locator("text=Hesap ayarları").isVisible().catch(() => false));
+
+                await page.fill("#set-fullname", "Renamed User");
+                await page.locator('button:has-text("Değişiklikleri kaydet")').click();
+                await page.waitForTimeout(2200);
+
+                await page.reload();
+                await page.waitForTimeout(2500);
+                const shown = await page.locator("body").innerText();
+                check(`${label}: renamed profile shows in the sidebar`, shown.includes("Renamed User"));
+
+                await settingsButton.click();
+                await page.waitForTimeout(600);
+                await page.fill("#set-pic", "javascript:alert(1)");
+                check(`${label}: a javascript: avatar cannot be saved`,
+                    await page.locator('button:has-text("Değişiklikleri kaydet")').isDisabled());
+                await page.keyboard.press("Escape").catch(() => {});
+                await page.locator('[title="Kapat"]').click().catch(() => {});
+                await page.waitForTimeout(400);
             }
 
             check(`${label}: no console errors`, errors.length === 0, errors.slice(0, 2).join(" | "));
