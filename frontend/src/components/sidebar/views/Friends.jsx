@@ -175,7 +175,7 @@ const Friends = ({ onBack, initialTab }) => {
                                                 className="btn-primary-grad flex items-center gap-1.5 px-3 py-2 text-xs flex-shrink-0"
                                                 title="Mesaj gönder"
                                             >
-                                                <FiMessageSquare className="text-sm" />
+                                                <FiMessageSquare size={14} />
                                                 Mesaj
                                             </button>
                                             {/* Arkadaştan çıkar */}

@@ -105,10 +105,10 @@ const UserInfo = ({ onAddFriendClick, onNotificationClick }) => { // onAddFriend
                     {/* Arkadaş Ekle */}
                     <button
                         onClick={onAddFriendClick} // Tıklayınca Sidebar'daki setView("addFriend") fonksiyonunu çağır
-                        className="w-9 h-9 rounded-xl flex items-center justify-center btn-primary-grad p-0"
+                        className="w-9 h-9 rounded-xl flex items-center justify-center btn-primary-grad btn-icon-only"
                         title="Arkadaş ekle"
                     >
-                        <FaUserPlus className="text-sm" />
+                        <FaUserPlus size={16} />
                     </button>
 
                     {/* Hesap ayarları */}
@@ -140,8 +140,8 @@ const UserInfo = ({ onAddFriendClick, onNotificationClick }) => { // onAddFriend
                             <div className="absolute left-1/2 -translate-x-1/2 mt-2 w-96 bg-[color:var(--bg-panel)] rounded-lg shadow-lg border border-[color:var(--border-subtle)] z-50">
                                 {/* Header */}
                                 <div className="p-3 border-b border-[color:var(--border-subtle)]">
-                                    <h3 className="text-white font-semibold">
-                                        Notifications ({totalNotifications})
+                                    <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+                                        Bildirimler ({totalNotifications})
                                     </h3>
                                 </div>
 
@@ -149,7 +149,7 @@ const UserInfo = ({ onAddFriendClick, onNotificationClick }) => { // onAddFriend
                                 <div className="max-h-96 overflow-y-auto">
                                     {totalNotifications === 0 ? (
                                         <div className="p-4 text-center text-[color:var(--text-muted)]">
-                                            No new notifications
+                                            Yeni bildirim yok
                                         </div>
                                     ) : (
                                         <>

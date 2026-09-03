@@ -361,6 +361,18 @@ textarea,
   caret-color: auto;
 }
 
+/* İkonlar esnek kutularda ezilmemeli.
+   .btn-primary-grad kendi padding'ini dayattığı için dar bir düğmede
+   ikona yer kalmıyor ve SVG 16px yerine 4px genişliğe sıkışıyordu. */
+svg {
+  flex-shrink: 0;
+}
+
+/* Yalnızca ikon içeren düğmeler: yatay dolguyu kaldır */
+.btn-icon-only {
+  padding: 0 !important;
+}
+
 /* ── Etkileşim ──
    Tek bir geçiş süresi ve eğrisi: hareketler tutarlı hissettirsin. */
 button,

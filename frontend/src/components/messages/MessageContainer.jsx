@@ -292,7 +292,7 @@ const MessageContainer = () => {
                                 className="p-1.5 hover:bg-white/10 rounded-full text-[color:var(--text-muted)] hover:text-white transition-colors ml-2"
                                 title="Kapat"
                             >
-                                <IoClose className="text-lg" />
+                                <IoClose size={18} />
                             </button>
                         </div>
                     </div>

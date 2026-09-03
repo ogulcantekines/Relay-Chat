@@ -67,7 +67,7 @@ const AddFriend = ({ onBack }) => {
                         className="btn btn-sm btn-circle btn-ghost text-[color:var(--text-muted)] hover:text-white hover:bg-[color:var(--bg-elevated)]"
                         title="Geri"
                     >
-                        <FaArrowLeft className="text-lg" />
+                        <FaArrowLeft size={16} />
                     </button>
                     <h2 className="text-lg font-bold text-white">Arkadaş Ekle</h2>
                 </div>
@@ -155,7 +155,7 @@ const AddFriend = ({ onBack }) => {
                                     className="btn btn-sm bg-green-500 hover:bg-green-600 border-none text-white gap-1"
                                     title="Mesaj gönder"
                                 >
-                                    <FaComment className="text-sm" />
+                                    <FaComment size={14} />
                                 </button>
 
                                 {/* Arkadaş Ekle Butonu → handleSendRequest (FriendRequest oluşturur) */}
@@ -168,7 +168,7 @@ const AddFriend = ({ onBack }) => {
                                         <span className="loading loading-spinner loading-xs"></span>
                                     ) : (
                                         <>
-                                            <FaUserPlus className="text-sm" />
+                                            <FaUserPlus size={14} />
                                             Ekle
                                         </>
                                     )}
