@@ -1,4 +1,7 @@
 import User from "../models/user.model.js";
+import { disconnectSession, disconnectUser } from "../socket/socket.js";
+import Session from "../models/session.model.js";
+import { validPassword } from "../utils/validation.js";
 import bcyrpt from "bcryptjs";
 import generateTokenAndSetCookie from "../utils/generateToken.js";
 import generateFriendCode from "../utils/generateFriendCode.js";
@@ -11,7 +14,7 @@ export const signup = async (req, res) => {
         // ═══ GİRDİ DOĞRULAMA ═══
         // Şema seviyesindeki required kuralları boş string'i yakalamıyordu,
         // bu yüzden alanlar burada açıkça kontrol ediliyor.
-        if (!fullName?.trim() || !username?.trim() || !password || !gender) {
+        if (typeof fullName !== "string" || !fullName.trim() || fullName.trim().length > 50 || typeof username !== "string" || typeof password !== "string" || typeof confirmPassword !== "string" || !gender) {
             return res.status(400).send({ message: "All fields are required" });
         }
         if (!/^[a-zA-Z0-9_]{3,20}$/.test(username)) {
@@ -19,8 +22,8 @@ export const signup = async (req, res) => {
                 message: "Username must be 3-20 characters and contain only letters, numbers or underscore"
             });
         }
-        if (password.length < 6) {
-            return res.status(400).send({ message: "Password must be at least 6 characters" });
+        if (!validPassword(password)) {
+            return res.status(400).send({ message: "Password must be at least 8 characters and at most 72 UTF-8 bytes" });
         }
         if (!["male", "female"].includes(gender)) {
             return res.status(400).send({ message: "Gender must be either 'male' or 'female'" });
@@ -39,25 +42,21 @@ export const signup = async (req, res) => {
         const salt = await bcyrpt.genSalt(10); //"10" ne kadar karmaşık olacağını belirler
         const hashedPassword = await bcyrpt.hash(password, salt);
 
-        const boyProfilePic = `https://ui-avatars.com/api/?name=${username}&background=0D8ABC&color=fff`;
-        const girlProfilePic = `https://ui-avatars.com/api/?name=${username}&background=F472B6&color=fff`;
-
         // Yeni kullanıcı oluştur. oluşturduğumuz User modeli mongoose modelidir ve mongodb kısmında users koleksiyonuna karşılık gelir
         const newUser = new User({
             //_id: new mongoose.Types.ObjectId(),yeni bir id oluştur bunu mongoose otomatik oluşturur
-            fullName: fullName,
+            fullName: fullName.trim(),
             username: username,
             password: hashedPassword,
             gender: gender,
-            profilePic: gender === "male" ? boyProfilePic : girlProfilePic, //cinsiyete göre profil resmi belirle eğer erkekse erkek resmi, kadınsa kadın resmi
+            profilePic: "", // The UI renders local initials until the user chooses an HTTPS avatar.
             friendCode: await generateFriendCode(),
         });
 
         if (newUser) {
             // Generate token and set cookie işlemi
-            generateTokenAndSetCookie(newUser, res); // bu token apilere erişim için kullanılır,mesela postman veya başka istekler her yerden yapılmasın diye çerezde token saklanır
-
-            await newUser.save(); //veritabanına kaydet
+            await newUser.save(); // Persist the account before issuing its session.
+            await generateTokenAndSetCookie(newUser, res);
 
             res.status(201).send({
                 message: "User created successfully",//serverın mesajı  user:bu bu diyor
@@ -75,7 +74,7 @@ export const signup = async (req, res) => {
         }
 
     } catch (error) {
-        res.status(500).send({ message: error.message });
+        res.status(error.code === 11000 ? 400 : 500).send({ message: error.code === 11000 ? "User already exists" : "Internal Server Error" });
     }
 };
 
@@ -83,21 +82,21 @@ export const login = async (req, res) => {
     try {
         const { username, password } = req.body; //bodyden kullanıcı adı ve şifre al
 
-        if (!username || !password) {
+        if (typeof username !== "string" || !/^[a-zA-Z0-9_]{3,20}$/.test(username) || typeof password !== "string" || !password || Buffer.byteLength(password, "utf8") > 72) {
             return res.status(400).send({ message: "Username and password are required" });
         }
 
         const user = await User.findOne({ username: username }); //users collectionında kullanıcıyı bul
 
         if (!user) {
-            return res.status(400).send({ message: "User does not exist" });
+            return res.status(400).send({ message: "Invalid username or password" });
         }
         const isPasswordCorrect = await bcyrpt.compare(password, user.password); //bcrypt ile hashlenmiş şifreyi karşılaştır
         if (!isPasswordCorrect) {
             return res.status(400).send({ message: "Invalid username or password" });
         }
         // Generate token and set cookie
-        generateTokenAndSetCookie(user, res); //auth işlemi başarılı ise token oluştur ve çerezde sakla. Bu token giriş yapan kullanıcıyı tanımlamak için kullanılır. onun giriş kartıdır.
+        await generateTokenAndSetCookie(user, res); //auth işlemi başarılı ise token oluştur ve çerezde sakla. Bu token giriş yapan kullanıcıyı tanımlamak için kullanılır. onun giriş kartıdır.
 
         res.status(200).send({
             message: "Login successful",//server geri döndürülen mesajı
@@ -111,12 +110,14 @@ export const login = async (req, res) => {
             }
         });
     } catch (error) {
-        res.status(500).send({ message: error.message });
+        res.status(error.code === 11000 ? 400 : 500).send({ message: error.code === 11000 ? "User already exists" : "Internal Server Error" });
     }
 }
 
-export const logout = (req, res) => {
+export const logout = async (req, res) => {
     try {
+        await Session.deleteOne({ _id: req.sessionId, userId: req.userId });
+        disconnectSession(req.sessionId);
         res.clearCookie("token", {  //çerezi temizle cookieden id ve username silinir.
             httpOnly: true,
             secure: cookieSecure,
@@ -125,7 +126,7 @@ export const logout = (req, res) => {
         });
         res.status(200).send({ message: "Logout successful" });
     } catch (error) {
-        res.status(500).send({ message: error.message });
+        res.status(error.code === 11000 ? 400 : 500).send({ message: error.code === 11000 ? "User already exists" : "Internal Server Error" });
     }
 }
 
@@ -153,7 +154,7 @@ export const getMe = async (req, res) => {
             }
         });
     } catch (error) {
-        res.status(500).send({ message: error.message });
+        res.status(error.code === 11000 ? 400 : 500).send({ message: error.code === 11000 ? "User already exists" : "Internal Server Error" });
     }
 };
 
@@ -169,7 +170,7 @@ export const updateProfile = async (req, res) => {
         const updates = {};
 
         if (fullName !== undefined) {
-            if (!fullName.trim() || fullName.trim().length > 50) {
+            if (typeof fullName !== "string" || !fullName.trim() || fullName.trim().length > 50) {
                 return res.status(400).send({ message: "Full name must be between 1 and 50 characters" });
             }
             updates.fullName = fullName.trim();
@@ -177,8 +178,8 @@ export const updateProfile = async (req, res) => {
 
         if (profilePic !== undefined) {
             // Sadece http(s) adresine izin ver: javascript: gibi şemalar XSS'e açık
-            if (profilePic && !/^https?:\/\/\S+$/i.test(profilePic)) {
-                return res.status(400).send({ message: "Profile picture must be a valid http(s) URL" });
+            if (typeof profilePic !== "string" || profilePic.length > 2048 || (profilePic && !/^https:\/\/[^\s]+$/i.test(profilePic))) {
+                return res.status(400).send({ message: "Profile picture must be an HTTPS URL of at most 2048 characters" });
             }
             updates.profilePic = profilePic;
         }
@@ -208,7 +209,7 @@ export const updateProfile = async (req, res) => {
             }
         });
     } catch (error) {
-        res.status(500).send({ message: error.message });
+        res.status(error.code === 11000 ? 400 : 500).send({ message: error.code === 11000 ? "User already exists" : "Internal Server Error" });
     }
 };
 
@@ -221,11 +222,11 @@ export const changePassword = async (req, res) => {
     try {
         const { currentPassword, newPassword } = req.body;
 
-        if (!currentPassword || !newPassword) {
+        if (typeof currentPassword !== "string" || !currentPassword || Buffer.byteLength(currentPassword, "utf8") > 72 || typeof newPassword !== "string") {
             return res.status(400).send({ message: "Current and new password are required" });
         }
-        if (newPassword.length < 6) {
-            return res.status(400).send({ message: "New password must be at least 6 characters" });
+        if (!validPassword(newPassword)) {
+            return res.status(400).send({ message: "New password must be at least 8 characters and at most 72 UTF-8 bytes" });
         }
 
         const user = await User.findById(req.userId);
@@ -241,9 +242,12 @@ export const changePassword = async (req, res) => {
         const salt = await bcyrpt.genSalt(10);
         user.password = await bcyrpt.hash(newPassword, salt);
         await user.save();
+        await Session.deleteMany({ userId: req.userId });
+        await generateTokenAndSetCookie(user, res);
+        disconnectUser(req.userId);
 
         res.status(200).send({ message: "Password changed successfully" });
     } catch (error) {
-        res.status(500).send({ message: error.message });
+        res.status(error.code === 11000 ? 400 : 500).send({ message: error.code === 11000 ? "User already exists" : "Internal Server Error" });
     }
 };

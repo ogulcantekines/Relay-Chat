@@ -9,13 +9,14 @@
     "client": "npm --prefix frontend run dev",
     "build": "npm --prefix frontend run build",
     "lint": "npm --prefix frontend run lint",
-    "install:all": "npm install && cd frontend && npm install",
+    "install:all": "npm ci && npm --prefix frontend ci",
     "test": "node scripts/smoke-test.js",
     "docker:up": "docker compose up --build -d",
     "docker:down": "docker compose down",
     "test:realtime": "node scripts/realtime-test.js",
-    "test:all": "npm test && npm run test:realtime && npm run test:ui",
-    "test:ui": "node scripts/ui-test.js"
+    "test:all": "npm run build && npm test && npm run test:realtime && npm run test:security && npm run test:ui",
+    "test:ui": "node scripts/ui-test.js",
+    "test:security": "node scripts/security-test.js"
   },
   "type": "module",
   "keywords": [],
@@ -39,5 +40,8 @@
     "nodemon": "^3.1.14",
     "playwright": "^1.63.0",
     "socket.io-client": "^4.8.3"
+  },
+  "engines": {
+    "node": ">=22.12.0"
   }
 }

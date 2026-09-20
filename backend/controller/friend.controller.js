@@ -1,3 +1,4 @@
+import { validId, publicUserFields } from "../utils/validation.js";
 import User from "../models/user.model.js";
 import FriendRequest from "../models/friendRequest.model.js";
 import { getReceiverSocketId, io } from "../socket/socket.js";
@@ -19,6 +20,7 @@ export const searchUsers = async (req, res) => {
         const { query } = req.query; //arama kısmına ?dan sonra gelen veri, req nesnesinin query özelliğinin içinde saklanır
         //yani ?query=ogi aslında req{query:{query:"ogi"}} şeklinde nesne olarak kaydedilir
         const userId = req.userId;
+        if (typeof query !== "string" || query.length > 20 || !/^[a-zA-Z0-9_]{1,20}$/.test(query)) return res.status(400).json({ message: "Search must contain 1-20 letters, numbers or underscores" });
 
         // Username veya friend code ile arama
         //mongodb de özellik ler ve onları değiştiren operatörler nesne içine alınır örneğin
@@ -31,14 +33,14 @@ export const searchUsers = async (req, res) => {
                 { friendCode: { $regex: query.toUpperCase() } }  // Friend code'da ara (büyük harfe çevir)
             ],
             _id: { $ne: userId }  // Kendini sonuçlardan çıkar
-        }).select("fullName username profilePic friendCode");
+        }).select(publicUserFields).limit(20);
         // Arama sonucunda sadece arayüzün ihtiyaç duyduğu alanlar döner.
         // "-password" yeterli değildi: friends dizisi gibi alanlar da dışarı sızıyordu.
 
         res.status(200).json(users); // Bulunan kullanıcıları JSON olarak döndür
 
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ error: "Internal Server Error" });
     }
 };
 
@@ -53,6 +55,7 @@ export const sendFriendRequest = async (req, res) => {
         const { receiverId } = req.params; // URL'den alıcı ID'si → /send/675abc123 → receiverId = "675abc123"
         const senderId = req.userId;       // protectRoute'dan → isteği yapan kullanıcı
 
+        if (receiverId === senderId) return res.status(400).json({ message: "Cannot add yourself" });
         // Her iki kullanıcıyı da DB'den çek
         const sender = await User.findById(senderId);
         const receiver = await User.findById(receiverId);
@@ -65,7 +68,7 @@ export const sendFriendRequest = async (req, res) => {
         }
 
         // 2. Zaten arkadaş mı? → User modelindeki friends dizisinde kontrol
-        if (sender.friends.toString().includes(receiver._id)) {
+        if (sender.friends.some(id => id.equals(receiver._id))) {
             return res.status(400).json({ message: "You are already friends with this user" });
         }
 
@@ -116,13 +119,14 @@ export const sendFriendRequest = async (req, res) => {
         // alıcı sayfayı yenilemeden yeni isteği göremez. Socket.IO ile anlık bildirim!
         const receiverSocketId = getReceiverSocketId(receiverId);
         if (receiverSocketId) {
-            const senderData = await User.findById(senderId).select("-password");
+            const senderData = await User.findById(senderId).select(publicUserFields);
             io.to(receiverSocketId).emit("newFriendRequest", {
                 sender: senderData,           // Gönderenin bilgileri (avatar, isim vb.)
                 friendRequest: friendRequest,   // İstek bilgileri (ID, status vb.)
             });
         }
-        res.status(200).json({ message: "Friend request sent successfully" });
+        const outgoing = await FriendRequest.findById(friendRequest._id).populate("receiverId", publicUserFields);
+        res.status(200).json({ message: "Friend request sent successfully", friendRequest: outgoing });
 
     } catch (error) {
         console.error("Error sending friend request:", error);
@@ -141,13 +145,13 @@ export const getFriendRequests = async (req, res) => {
 
         // receiverId === userId → sana gönderilen istekleri bul
         // status: "pending" → sadece bekleyenleri getir
-        // .populate("senderId", "-password") → senderId'yi tam kullanıcı objesine çevir
+        // .populate("senderId", publicUserFields) → senderId'yi tam kullanıcı objesine çevir
         // populate olmadan: { senderId: "675abc123" }
         // populate ile:     { senderId: { _id: "675abc123", fullName: "Ali", profilePic: "..." } }
         const requests = await FriendRequest.find({
             receiverId: userId,
             status: "pending"
-        }).populate("senderId", "-password");
+        }).populate("senderId", publicUserFields);
 
         if (!requests) {
             return res.status(404).json({ message: "No friend requests found" });
@@ -178,6 +182,7 @@ export const respondToFriendRequest = async (req, res) => {
         const { requestId, response } = req.body; // Frontend'den gelen veri
         const userId = req.userId;
 
+        if (!validId(requestId)) return res.status(400).json({ message: "Invalid request id" });
         const friendRequest = await FriendRequest.findById(requestId);
 
         // ═══ GÜVENLİK KONTROLLERİ ═══
@@ -205,10 +210,10 @@ export const respondToFriendRequest = async (req, res) => {
             // 1. Her iki kullanıcının friends dizisine birbirini ekle
             // $push → MongoDB array operatörü, diziye yeni eleman ekler
             await User.findByIdAndUpdate(userId, {
-                $push: { friends: friendRequest.senderId }
+                $addToSet: { friends: friendRequest.senderId }
             });
             await User.findByIdAndUpdate(friendRequest.senderId, {
-                $push: { friends: userId }
+                $addToSet: { friends: userId }
             });
 
             // 2. Varsa pending conversation'ları active yap
@@ -223,12 +228,12 @@ export const respondToFriendRequest = async (req, res) => {
             friendRequest.status = "accepted";
 
             // 4. Kabul eden kullanıcının bilgilerini al (frontend'e döndürmek için)
-            friendUser = await User.findById(friendRequest.senderId).select("-password");
+            friendUser = await User.findById(friendRequest.senderId).select(publicUserFields);
 
             // 5. Socket.IO ile gönderene anlık bildirim → "İsteğin kabul edildi!"
             const senderSocketId = getReceiverSocketId(friendRequest.senderId);
             if (senderSocketId) {
-                const acceptedByUser = await User.findById(userId).select("-password");
+                const acceptedByUser = await User.findById(userId).select(publicUserFields);
                 io.to(senderSocketId).emit("friendRequestResponse", {
                     friendRequest: friendRequest,
                     friendUser: friendUser,
@@ -243,7 +248,7 @@ export const respondToFriendRequest = async (req, res) => {
             // Socket.IO ile gönderene bildirim → "İsteğin reddedildi"
             const senderSocketId = getReceiverSocketId(friendRequest.senderId);
             if (senderSocketId) {
-                const rejectedByUser = await User.findById(userId).select("-password");
+                const rejectedByUser = await User.findById(userId).select(publicUserFields);
                 io.to(senderSocketId).emit("friendRequestRejected", {
                     friendRequest: friendRequest,
                     rejectedByUser: rejectedByUser
@@ -273,11 +278,11 @@ export const respondToFriendRequest = async (req, res) => {
 export const getFriends = async (req, res) => {
     try {
         const userId = req.userId;
-        // .populate("friends", "-password")
+        // .populate("friends", publicUserFields)
         // User modelinde friends: [ObjectId] → populate ile tam kullanıcı objesine çevir
         // Populate öncesi: friends: ["675abc", "675def"]
         // Populate sonrası: friends: [{_id: "675abc", fullName: "Ali", ...}, {_id: "675def", ...}]
-        const user = await User.findById(userId).populate("friends", "-password");
+        const user = await User.findById(userId).populate("friends", publicUserFields);
 
         if (!user) {
             return res.status(404).json({ message: "User not found" });
@@ -337,11 +342,11 @@ export const getSentFriendRequests = async (req, res) => {
         const userId = req.userId;
 
         // senderId === userId → kendin gönderdiğin istekleri bul
-        // .populate("receiverId", "-password") → alıcının tam bilgilerini getir
+        // .populate("receiverId", publicUserFields) → alıcının tam bilgilerini getir
         const sentRequests = await FriendRequest.find({
             senderId: userId,
             status: "pending"
-        }).populate("receiverId", "-password");
+        }).populate("receiverId", publicUserFields);
 
         res.status(200).json({
             sentRequests: sentRequests

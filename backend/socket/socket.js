@@ -1,129 +1,84 @@
 import { Server } from "socket.io";
-import http from "http";
+import http from "node:http";
 import express from "express";
+import cookieParser from "cookie-parser";
 import Message from "../models/message.model.js";
+import Conversation from "../models/conversation.model.js";
+import { verifySession } from "../utils/session.js";
+import { validId } from "../utils/validation.js";
+import { isAllowedOrigin } from "../middleware/origin.js";
 
-const app = express(); //express serverı oluşturma
-const server = http.createServer(app); //ana kapsayıcı http serverı oluşturma ve expressi onu subserverın olarak kullanma
+const app = express();
+const server = http.createServer(app);
+const io = new Server(server, {
+    maxHttpBufferSize: 16 * 1024,
+    cors: { origin: process.env.CLIENT_URL || "http://localhost:3000", credentials: true },
+    allowRequest: (request, done) => done(null, isAllowedOrigin(request.headers.origin, request))
+});
+const parseCookies = cookieParser();
+const userSockets = new Map();
+const userRoom = (id) => `user:${id}`;
+// A room includes every tab/device; disconnecting one tab does not hide the others.
+export const getReceiverSocketId = (id) => userSockets.has(String(id)) ? userRoom(id) : undefined;
+export const disconnectSession = (id) => io.in(`session:${id}`).disconnectSockets(true);
+export const disconnectUser = (id) => io.in(userRoom(id)).disconnectSockets(true);
 
-// CORS yalnızca istemci farklı bir adresten geldiğinde gerekir.
-// Production'da arayüz bu sunucudan servis edildiği için istek aynı kökenli
-// olur ve CORS'a gerek kalmaz; CLIENT_URL verilirse (arayüz ayrı bir yerde
-// barındırılıyorsa) yalnızca o adrese izin verilir.
-// Geliştirmede Vite 3000'de çalıştığı için oraya izin verilir.
-const allowedOrigin = process.env.CLIENT_URL
-    || (process.env.NODE_ENV === "production" ? true : "http://localhost:3000");
-
-const io = new Server(server, {  //ana kapsayıcı http serverını kullanarak socket.io subserverı oluşturma
-    cors: {
-        origin: allowedOrigin,
-        methods: ["GET", "POST"],
-        credentials: true
-    }
+io.use(async (socket, next) => {
+    try {
+        if (!isAllowedOrigin(socket.handshake.headers.origin, socket.request)) throw new Error();
+        parseCookies(socket.request, {}, () => {});
+        const session = await verifySession(socket.request.cookies?.token);
+        if ((userSockets.get(session.id)?.size || 0) >= 10) throw new Error();
+        socket.data.session = session;
+        socket.data.token = socket.request.cookies.token;
+        next();
+    } catch { next(new Error("Authentication required")); }
 });
 
-const userSocketMap = {}; //burada object atamanın farklı bir gösterimini kullanıyoruz
-//örneğin userSocketMap = { "userId1": "socketId1", "userId2": "socketId2" } gibi olması için
-//userSocketMap[userId] = socketId; şeklinde atama yapıyoruz
-// userSocketMap {
-//   userId1: socketId1,
-//   userId2: socketId2,
-//   ...
-// } şeklinde bir yapı oluşur. js obje konusu direkt
-
-//fonksiyon kullanımı
-export const getReceiverSocketId = (receiverId) => {
-    return userSocketMap[receiverId]; // userSocketMap{receiverId: socketId}
-};
-//kullanıcı login olduğu vakit frontendden backende socket bağlantısı kurarken userId yi de gönderiyoruz ve bu otomatik olarak io connection eventinde yakalanıyor
 io.on("connection", (socket) => {
-    console.log("A user connected:", socket.id);
-
-    // Kullanıcı ID'sini handshake'ten al ve socket ID ile eşle bu handshake query kısmı frontendden socket bağlantısı kurarken gönderilen userId yi içerir
-    const userId = socket.handshake.query.userId;
-    if (userId !== "undefined") userSocketMap[userId] = socket.id;
-
-    io.emit("getOnlineUsers", Object.keys(userSocketMap));// Tüm bağlı kullanıcılara online kullanıcı listesini gönder
-    // object keys ile userSocketMap in keylerini alıyoruz yani userId1 : socketıd1 ise object keys ile sadece userId1 i alıyoruz
-    //backend forntend veri gönderimlerinde otomatik olarak json a çevirir
-    //örneğin userSocketMap = { userId1: "socketId1", userId2: "socketId2" } ise Object.keys(userSocketMap) = ["userId1", "userId2"] olur
-
-
-    // Yazıyor göstergesi - kullanıcı yazmaya başladığında
-    socket.on("typing", (data) => {
-        const { receiverId } = data; //destructor ile data nesnesinden receiverId yi alıyoruz
-        const receiverSocketId = getReceiverSocketId(receiverId); // receiverId ye karşılık gelen socketId yi alıyoruz
-
-        if (receiverSocketId) {
-            // Alıcıya yazıyor bilgisi gönder
-            io.to(receiverSocketId).emit("userTyping", {
-                senderId: userId
-            }); // nesne olarak yayınlıyoruz ki receiver tarafında data.senderId ile erişilebilsin
-        }
+    const { id: userId, jti, exp } = socket.data.session;
+    const tabs = userSockets.get(userId) || new Set();
+    tabs.add(socket.id);
+    userSockets.set(userId, tabs);
+    socket.join(userRoom(userId));
+    socket.join(`session:${jti}`);
+    io.emit("getOnlineUsers", [...userSockets.keys()]);
+    const expires = setTimeout(() => socket.disconnect(true), Math.max(0, exp * 1000 - Date.now()));
+    expires.unref();
+    let windowStart = Date.now();
+    let eventCount = 0;
+    socket.use(async (packet, next) => {
+        if (Date.now() - windowStart > 60000) { windowStart = Date.now(); eventCount = 0; }
+        if (++eventCount > 120) { socket.disconnect(true); return; }
+        try { await verifySession(socket.data.token); next(); }
+        catch { socket.disconnect(true); }
     });
-
-    // Yazıyor göstergesini durdur - kullanıcı yazmayı bıraktığında
-    socket.on("stopTyping", (data) => {
-        const { receiverId } = data;
-        const receiverSocketId = getReceiverSocketId(receiverId);
-
-        if (receiverSocketId) {
-            // Alıcıya yazmanın durduğu bilgisini gönder
-            io.to(receiverSocketId).emit("userStoppedTyping", {
-                senderId: userId
-            });
-        }
-    });
-
-    // Chat açılması frontendde kolay kontrol ediliyor ama backendde bu event dinlenip işlem yapılıyor
-    socket.on("chatOpened", async (data) => { //bu event chatin açık olup olamadığını backend e bildiriyor
-
-        // data nesnesi içinde otherUserId var
-        const { otherUserId } = data;
-
+    const withPeer = (event, key, callback) => socket.on(event, async (data) => {
         try {
-            // Bu kullanıcıya gönderilen okunmamış mesajları bul ve güncelle, burası database de messages koleksiyonunda isRead alanını true yapıyor
-            // otherUserId, chat açılan kişinin userId'si yani karşı tarafın id'si userId ise kendi id'miz
-
-            // ✅ FIX: Hem isRead: false olan HEM DE isRead field'ı olmayan (eski) mesajları güncelle
-            await Message.updateMany(
-                {
-                    senderId: otherUserId,  // Bu kısım ilk parametre ve filtreleme için kullanılıyor
-                    receiverId: userId,      //örneğin senderıd si emitlenen değer olup receiver idsi kendi idmiz olup bir de mesaj henüz okunmamış ise
-                    $or: [
-                        { isRead: false },                    // isRead: false olanlar
-                        { isRead: { $exists: false } }        // isRead field'ı yoksa eşleş
-                    ] //or ve exist $ operatörleri ile birlikte kullanılıyor çünkü isim çakışması olabilir bunların isim olmadığını belirtiyoruz operatörler
-                },
-                {
-                    isRead: true // Bu kısım ikinci parametre ve güncelleme için kullanılıyor
-                }
-            );
-            // Karşı tarafa "mesajlarını okudum" bilgisi gönder
-            const otherUserSocketId = getReceiverSocketId(otherUserId); //otherUserId den karşı tarafın socket id sini al
-            if (otherUserSocketId) {
-                io.to(otherUserSocketId).emit("messagesRead", {  //karşının frontend socketine emit et bu nesneyi yolla
-                    readByUserId: userId
-                });
-            }
-
-            console.log(`Messages marked as read for user ${userId} from ${otherUserId}`);
-        } catch (error) {
-            console.error("Error marking messages as read:", error);
-        }
+            const peerId = data?.[key];
+            if (!validId(peerId) || peerId === userId) return;
+            if (!await Conversation.exists({ participants: { $all: [userId, peerId] } })) return;
+            await callback(peerId);
+        } catch { /* Malformed events and transient database errors never crash the server. */ }
     });
-
-    // Kullanıcı bağlantısı kesildiğinde temizlik yap. frontendde logouta basılınca uselogout tetiklenir ve socket bağlantısı kesilir.
+    withPeer("typing", "receiverId", (peerId) => io.to(userRoom(peerId)).emit("userTyping", { senderId: userId }));
+    withPeer("stopTyping", "receiverId", (peerId) => io.to(userRoom(peerId)).emit("userStoppedTyping", { senderId: userId }));
+    withPeer("chatOpened", "otherUserId", async (peerId) => {
+        await Message.updateMany({ senderId: peerId, receiverId: userId, isRead: { $ne: true }, clearedBy: { $ne: userId } }, { $set: { isRead: true } });
+        io.to(userRoom(peerId)).emit("messagesRead", { readByUserId: userId });
+    });
     socket.on("disconnect", () => {
-        console.log("A user disconnected:", socket.id);
-        delete userSocketMap[userId]; // Kullanıcıyı haritadan çıkar
-        io.emit("getOnlineUsers", Object.keys(userSocketMap)); // Güncel online listesi gönder
+        clearTimeout(expires);
+        tabs.delete(socket.id);
+        if (!tabs.size) userSockets.delete(userId);
+        io.emit("getOnlineUsers", [...userSockets.keys()]);
     });
 });
-
 export { io, server, app };
 
-
+// Historical learning notes below explain Socket.IO's client/server event model.
+// The former query.userId examples are not authentication; the implementation
+// above uses only the verified HttpOnly session cookie.
 //io.emit veya io.to(...).emit(...) kullanımı backendden clienta event göndermek için kullanılır
 //socket.on(...) kullanımı ise clienttan backend e event dinlemek için kullanılır
 //tam tersinde ise

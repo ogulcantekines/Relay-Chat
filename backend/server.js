@@ -7,20 +7,22 @@ import cookieParser from "cookie-parser";
 import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 import compression from "compression";
 import helmet from "helmet";
+import mongoose from "mongoose";
+import { protectOrigin } from "./middleware/origin.js";
 import connectToMongoDB from "./db/connectToMongoDB.js";
 import authRoutes from "./routes/auth.route.js";
 import messageRoutes from "./routes/message.route.js";
 import userRoutes from "./routes/user.route.js";
 import friendRoutes from "./routes/friend.route.js";
 import conversationRoutes from "./routes/conversation.route.js";
-import { app, server } from "./socket/socket.js";
+import { app, server, io } from "./socket/socket.js";
 
 const PORT = process.env.PORT || 5000;
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Uygulama JWT_SECRET olmadan çalışmamalı: eksikse token'lar imzalanamaz.
-if (!process.env.JWT_SECRET) {
-    console.error("JWT_SECRET is not defined. Check your .env file.");
+if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
+    console.error("JWT_SECRET must contain at least 32 random characters.");
     process.exit(1);
 }
 
@@ -33,7 +35,9 @@ if (!process.env.JWT_SECRET) {
 // geliyormuş gibi görür. Bu durumda aşağıdaki rate limit, farklı cihazları
 // tek bir istemci sayar. Linux sunucuda gerçek DNAT uygulandığı için
 // istemci IP'si korunur ve limit cihaz başına çalışır.
-app.set("trust proxy", 1);
+const proxyHops = Number(process.env.TRUST_PROXY || 0);
+if (!Number.isInteger(proxyHops) || proxyHops < 0 || proxyHops > 5) throw new Error("TRUST_PROXY must be an integer from 0 to 5");
+app.set("trust proxy", proxyHops);
 
 // Güvenlik başlıkları.
 // Uygulama kendi arayüzünü servis ettiği için CSP'de 'self' yeterli;
@@ -45,13 +49,14 @@ app.use(helmet({
             defaultSrc: ["'self'"],
             scriptSrc: ["'self'"],
             styleSrc: ["'self'", "'unsafe-inline'"], // bileşenler satır içi stil kullanıyor
-            imgSrc: ["'self'", "data:", "https://ui-avatars.com"],
+            imgSrc: ["'self'", "data:", "https:"],
             mediaSrc: ["'self'"],
             connectSrc: ["'self'", "ws:", "wss:"],
             objectSrc: ["'none'"],
             frameAncestors: ["'none'"], // clickjacking
             baseUri: ["'self'"],
-            formAction: ["'self'"]
+            formAction: ["'self'"],
+            upgradeInsecureRequests: process.env.COOKIE_SECURE === "true" ? [] : null
         }
     },
     // Çapraz kaynak izolasyonu arayüzdeki harici avatarları engelliyordu
@@ -63,9 +68,16 @@ app.use(helmet({
 // Yanıtları gzip ile sıkıştır: derlenmiş JS paketi 351 KB'tan ~108 KB'a iner.
 app.use(compression());
 
-app.use(express.json()); // JSON formatındaki istek gövdelerini işlemek için
-app.use(express.urlencoded({ extended: true })); // URL-encoded verileri işlemek için
-app.use(cookieParser()); // Cookie'leri işlemek için
+app.use(protectOrigin);
+app.use(express.json({ limit: "16kb" })); // JSON formatındaki istek gövdelerini işlemek için
+app.use(express.urlencoded({ extended: false, limit: "16kb" })); // URL-encoded verileri işlemek için
+app.use(cookieParser());
+app.use("/api", (req, res, next) => {
+    res.setHeader("Cache-Control", "no-store");
+    if (["POST", "PUT", "PATCH"].includes(req.method) && (req.body === null || (req.body !== undefined && (typeof req.body !== "object" || Array.isArray(req.body))))) return res.status(400).json({ message: "Expected a JSON object" });
+    req.body ??= {};
+    next();
+}); // Cookie'leri işlemek için
 
 // Kaba kuvvet denemelerini yavaşlatmak için giriş/kayıt uçlarına limit
 const authLimiter = rateLimit({
@@ -99,6 +111,17 @@ app.get("/api/health", (req, res) => {
     res.status(200).json({ status: "ok", uptime: process.uptime() });
 });
 
+app.get("/api/ready", (req, res) => {
+    const ready = mongoose.connection.readyState === 1;
+    res.status(ready ? 200 : 503).json({ status: ready ? "ready" : "unavailable" });
+});
+
+// A second IP-wide limit prevents cycling usernames to bypass account limits.
+app.use("/api", rateLimit({ windowMs: 60000, limit: 300, standardHeaders: "draft-8", legacyHeaders: false, message: { message: "Too many requests, please try again shortly." } }));
+const authIpLimit = rateLimit({ windowMs: 15 * 60000, limit: 100, standardHeaders: "draft-8", legacyHeaders: false, message: { message: "Too many authentication attempts." } });
+app.use(["/api/auth/login", "/api/auth/signup", "/api/auth/password"], authIpLimit);
+app.use("/api/auth/password", rateLimit({ windowMs: 15 * 60000, limit: 10, legacyHeaders: false, message: { message: "Too many password change attempts." } }));
+
 // API route'ları
 //app. ile kullanılan işlemler express serverına uygulanır bu api işlemleri backenddeki işlemlerdir. socket işlemleri io. veya socket. ile yapılır
 
@@ -112,6 +135,8 @@ app.use("/api/users", userRoutes);
 app.use("/api/friends", friendRoutes);
 app.use("/api/conversations", conversationRoutes);
 
+app.use("/api", (req, res) => res.status(404).json({ message: "API route not found" }));
+
 // Production'da derlenmiş frontend'i aynı sunucudan servis et.
 // Frontend tüm istekleri /api ile göreli attığı için ek CORS ayarı gerekmez.
 if (process.env.NODE_ENV === "production") {
@@ -120,8 +145,9 @@ if (process.env.NODE_ENV === "production") {
     // Derlenmiş dosya adları içerik hash'i taşıdığı için (index-C-zoC6mx.js)
     // uzun süre önbelleğe alınabilir; index.html ise her zaman tazelenmeli.
     app.use(express.static(clientDist, {
-        maxAge: "1y",
+        maxAge: 0,
         setHeaders: (res, filePath) => {
+            if (filePath.includes(`${path.sep}assets${path.sep}`)) res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
             if (filePath.endsWith("index.html")) {
                 res.setHeader("Cache-Control", "no-cache");
             }
@@ -130,9 +156,16 @@ if (process.env.NODE_ENV === "production") {
 
     // API dışındaki tüm yollar SPA'ya düşer (client-side routing)
     app.get(/^\/(?!api\/).*/, (req, res) => {
+        res.setHeader("Cache-Control", "no-cache");
         res.sendFile(path.join(clientDist, "index.html"));
     });
 }
+
+app.use((error, req, res, next) => {
+    if (res.headersSent) return next(error);
+    const status = error.type === "entity.too.large" ? 413 : error instanceof SyntaxError || error.name === "CastError" ? 400 : 500;
+    res.status(status).json({ message: status === 413 ? "Request body too large" : status === 400 ? "Invalid request" : "Internal Server Error" });
+});
 
 // Önce veritabanına bağlan, sonra dinlemeye başla.
 // Aksi halde DB hazır değilken gelen istekler timeout ile 500 dönüyordu.
@@ -146,6 +179,13 @@ server.listen(PORT, () => { //http serverı dinler. bu artık ana serverdır
 for (const signal of ["SIGTERM", "SIGINT"]) {
     process.on(signal, () => {
         console.log(`${signal} received, shutting down`);
-        server.close(() => process.exit(0));
+        const force = setTimeout(() => process.exit(1), 10000);
+        force.unref();
+        io.close(async () => {
+            await mongoose.disconnect();
+            clearTimeout(force);
+            process.exit(0);
+        });
+        server.closeIdleConnections();
     });
 }

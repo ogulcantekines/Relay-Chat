@@ -11,7 +11,12 @@ import {
     cancelFriendRequest
 } from "../controller/friend.controller.js";
 
+import { validateIds } from "../utils/validation.js";
+
 const router = express.Router();
+router.param("receiverId", validateIds);
+router.param("friendId", validateIds);
+router.param("requestId", validateIds);
 //bizim backend serverımıza istek atarken /api kullanıyoruz. var olan bir başka servera istek atacak olsaydık
 // /google.com gibi giderdi
 

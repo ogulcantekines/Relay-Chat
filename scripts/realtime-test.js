@@ -6,7 +6,7 @@
 //
 // Çalıştırmak için: npm run test:realtime
 
-import { spawn } from "child_process";
+import { startTestServer } from "./test-server.js";
 import { io } from "socket.io-client";
 
 const PORT = process.env.PORT || 5000;
@@ -71,10 +71,7 @@ async function waitForServer(timeoutMs = 45000) {
 
 async function run() {
     console.log("Starting server...");
-    const server = spawn("node", ["backend/server.js"], {
-        stdio: ["ignore", "inherit", "inherit"],
-        env: process.env
-    });
+    const server = await startTestServer();
 
     let exitCode = 1;
     let socketA, socketB;
@@ -95,12 +92,15 @@ async function run() {
         const aId = (await resA.json()).user._id;
         const bId = (await resB.json()).user._id;
 
-        socketA = io(BASE, { query: { userId: aId } });
-        socketB = io(BASE, { query: { userId: bId } });
+        socketA = io(BASE, { extraHeaders: { Cookie: cookieA }, reconnection: false });
+        socketB = io(BASE, { extraHeaders: { Cookie: cookieB }, reconnection: false });
 
-        await new Promise((resolve) => {
+        await new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => reject(new Error("Socket connection timed out")), 8000);
+            socketA.once("connect_error", reject);
+            socketB.once("connect_error", reject);
             let connected = 0;
-            const done = () => { if (++connected === 2) resolve(); };
+            const done = () => { if (++connected === 2) { clearTimeout(timeout); resolve(); } };
             socketA.on("connect", done);
             socketB.on("connect", done);
         });
@@ -160,9 +160,9 @@ async function run() {
     } finally {
         socketA?.close();
         socketB?.close();
-        server.kill("SIGTERM");
-        setTimeout(() => process.exit(exitCode), 300);
+        await server.stop();
+        process.exitCode = exitCode;
     }
 }
 
-run();
+run().catch((error) => { console.error(error.message); process.exitCode = 1; });

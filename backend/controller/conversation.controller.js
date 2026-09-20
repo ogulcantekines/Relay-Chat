@@ -1,3 +1,5 @@
+import { io } from "../socket/socket.js";
+import Message from "../models/message.model.js";
 import Conversation from "../models/conversation.model.js";
 
 //Tüm conversationları getir
@@ -13,7 +15,7 @@ export const getConversations = async (req, res) => {
                 path: "messages",
                 // Kullanıcının temizlediği mesajlar önizlemede görünmemeli
                 match: { clearedBy: { $ne: userId } },
-                options: { sort: { createdAt: -1 }, limit: 1 }
+                options: { sort: { _id: -1 } }, perDocumentLimit: 1
             })//ama burada secenek kısmında oluşturulma tarihine göre descending, desc , -1 gibi terimler kullanarak yeniden eskiye dogru sıralanır. limit ile de kac tane secilecegini belirler
             .sort({ updatedAt: -1 });//burada da find array dondugunden her bir conv buyuk bir nesneyi temsil eder. userıdinin katıldığı kac conversation varsa arrayde yazılır
         //bunların en son guncellenen convları yeniden eskiye sıralanır. yani en son mesaj gelen veya giden iilk sırada olur gibi dusun.
@@ -25,7 +27,7 @@ export const getConversations = async (req, res) => {
         res.status(200).json(conversations);
 
     } catch (error) {
-        res.status(500).json({ message: error.message })
+        res.status(500).json({ message: "Internal Server Error" })
 
     }
 }
@@ -45,7 +47,7 @@ export const getConversationsByStatus = async (req, res) => {
                 path: "messages",
                 // Kullanıcının temizlediği mesajlar önizlemede görünmemeli
                 match: { clearedBy: { $ne: userId } },
-                options: { sort: { createdAt: -1 }, limit: 1 }
+                options: { sort: { _id: -1 } }, perDocumentLimit: 1
             })
             .sort({ updatedAt: -1 });
 
@@ -73,9 +75,17 @@ export const acceptConversation = async (req, res) => {
             return res.status(404).json({ error: "Conversation not found" });
         }
 
+        if (conversation.status === "pending") {
+            const first = await Message.findOne({ $or: [
+                { senderId: conversation.participants[0], receiverId: conversation.participants[1] },
+                { senderId: conversation.participants[1], receiverId: conversation.participants[0] }
+            ] }).sort({ _id: 1 });
+            if (!first || first.receiverId.toString() !== userId) return res.status(403).json({ error: "Only the receiver can accept a message request" });
+        }
         //kilidi aç durumu aktif yap
         conversation.status = "active";
         await conversation.save();
+        for (const participant of conversation.participants) io.to(`user:${participant}`).emit("conversationAccepted", { conversationId: conversation._id });
 
         //güncel hali geri dön
         res.status(200).json(conversation);
