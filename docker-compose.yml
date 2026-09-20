@@ -25,7 +25,11 @@ services:
     init: true
     # Loopback only: local use is private and a future host proxy can share port 443.
     ports:
-      - "127.0.0.1:${APP_PORT:-5000}:5000"
+      # Varsayılan olarak yalnızca bu makineden erişilir.
+      # Aynı ağdaki başka bir cihazdan (telefon gibi) denemek için
+      # .env içinde BIND_ADDRESS=0.0.0.0 yapın ve CLIENT_URL'i
+      # o adrese göre güncelleyin.
+      - "${BIND_ADDRESS:-127.0.0.1}:${APP_PORT:-5000}:5000"
     environment:
       NODE_ENV: production
       PORT: 5000
