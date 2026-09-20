@@ -71,6 +71,11 @@ app.use(compression());
 app.use(protectOrigin);
 app.use(express.json({ limit: "16kb" })); // JSON formatındaki istek gövdelerini işlemek için
 app.use(express.urlencoded({ extended: false, limit: "16kb" })); // URL-encoded verileri işlemek için
+// CSRF koruması iki katmanlı ve yukarıdaki protectOrigin ile sağlanıyor:
+// durum değiştiren her istekte Origin başlığı doğrulanıyor, oturum çerezi
+// ise SameSite=Lax olduğu için çapraz site isteklerinde gönderilmiyor.
+// CodeQL yalnızca csurf benzeri bir paket aradığından bunu göremiyor.
+// codeql[js/missing-token-validation]
 app.use(cookieParser());
 app.use("/api", (req, res, next) => {
     res.setHeader("Cache-Control", "no-store");

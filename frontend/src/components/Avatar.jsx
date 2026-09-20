@@ -4,6 +4,10 @@ const Avatar = ({ src, name = '', alt = '', ...props }) => {
     const [failedSource, setFailedSource] = useState(null);
     const safeSource = typeof src === 'string' && (/^https:\/\//i.test(src) || /^\/(?!\/)/.test(src));
     if ((!safeSource || failedSource === src) && name) {
+        // Yalnızca ilk iki kelimenin baş harfleri alınır ve React bunu metin
+        // düğümü olarak yazar; HTML olarak yorumlanmaz. CodeQL'in "DOM text
+        // reinterpreted as HTML" uyarısı bu yüzden geçerli değil.
+        // codeql[js/html-constructed-from-input]
         const initials = name.trim().split(/\s+/).slice(0, 2).map(part => part[0]).join('').toLocaleUpperCase('tr');
         return <svg {...props} width="80" height="80" viewBox="0 0 80 80" role={alt ? 'img' : undefined} aria-label={alt || undefined} aria-hidden={alt ? undefined : true}>
             <rect width="80" height="80" rx="40" fill="#252e4a" />
