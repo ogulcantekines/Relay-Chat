@@ -1,3 +1,4 @@
+import { refreshConversationStatuses } from '../../utils/refreshConversations';
 import { useEffect } from "react";
 import toast from "react-hot-toast";
 import useSocket from "../../zustand/useSocket";
@@ -30,6 +31,7 @@ const useListenFriendEvents = () => {
         const onAccepted = ({ friendRequest, acceptedByUser }) => {
             removeSentFriendRequest(friendRequest._id);
             if (acceptedByUser) addFriend(acceptedByUser);
+            refreshConversationStatuses();
             toast.success(`${acceptedByUser?.fullName || "Kullanıcı"} arkadaşlık isteğini kabul etti`);
         };
 
@@ -39,11 +41,13 @@ const useListenFriendEvents = () => {
             toast(`${rejectedByUser?.fullName || "Kullanıcı"} arkadaşlık isteğini reddetti`);
         };
 
+        socket.on("conversationAccepted", refreshConversationStatuses);
         socket.on("newFriendRequest", onNewRequest);
         socket.on("friendRequestResponse", onAccepted);
         socket.on("friendRequestRejected", onRejected);
 
         return () => {
+            socket.off("conversationAccepted", refreshConversationStatuses);
             socket.off("newFriendRequest", onNewRequest);
             socket.off("friendRequestResponse", onAccepted);
             socket.off("friendRequestRejected", onRejected);

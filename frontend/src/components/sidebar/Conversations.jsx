@@ -10,7 +10,7 @@ import useUnread from "../../zustand/useUnread";
 // - Yeni draft conversation'lar useSendMessage tarafından bu listeye eklenir
 
 const Conversations = ({ filter = "" }) => {
-    const { loading, conversations } = useGetConversations();
+    const { loading, conversations, error, retry } = useGetConversations();
     const { counts } = useUnread();
 
     // Kenar çubuğundaki arama kutusuna göre isme/kullanıcı adına filtrele
@@ -30,6 +30,8 @@ const Conversations = ({ filter = "" }) => {
             </div>
         );
     }
+
+    if (error) return <div role="alert" className="p-6 text-center text-sm text-[color:var(--text-secondary)]">{error}<button onClick={retry} className="block mx-auto mt-3 text-[color:var(--accent-hover)]">Tekrar dene</button></div>;
 
     if (visible.length === 0) {
         return (

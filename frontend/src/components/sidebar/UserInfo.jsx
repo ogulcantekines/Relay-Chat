@@ -1,3 +1,4 @@
+import Avatar from '../Avatar';
 import { useState, useRef, useEffect } from "react";
 import { FaUserPlus, FaBell, FaUserFriends } from "react-icons/fa";
 import { IoSettingsOutline } from "react-icons/io5";
@@ -41,7 +42,9 @@ const UserInfo = ({ onAddFriendClick, onNotificationClick }) => { // onAddFriend
             }
         };
 
+        const handleEscape = event => { if (event.key === "Escape") setIsDropdownOpen(false); };
         if (isDropdownOpen) {
+            document.addEventListener("keydown", handleEscape);
             document.addEventListener("mousedown", handleClickOutside);//yönetici,çalıştıran fonksiyonu aracı gibi düşün
         }//yönetici,çalıştıran fonksiyonu aracı gibi düşün
         //yani handleClickOutside yazılırsa tanımlanmış o fonksiyonu çağır anlamına gelir
@@ -70,6 +73,7 @@ const UserInfo = ({ onAddFriendClick, onNotificationClick }) => { // onAddFriend
 
         return () => {
             document.removeEventListener("mousedown", handleClickOutside);
+            document.removeEventListener("keydown", handleEscape);
         };
     }, [isDropdownOpen]);
 
@@ -87,7 +91,7 @@ const UserInfo = ({ onAddFriendClick, onNotificationClick }) => { // onAddFriend
 
                 {/* sol: Kullanıcı Bilgisi */}
                 <div className="flex items-center gap-3 min-w-0">
-                    <img src={authUser?.profilePic} alt="" className="w-11 h-11 avatar-ring flex-shrink-0" />
+                    <Avatar name={authUser?.fullName} src={authUser?.profilePic} alt="" className="w-11 h-11 avatar-ring flex-shrink-0" />
                     <div className="min-w-0">
                         {/* Görünen ad birincil: ayarlardan değiştirilebilen budur.
                             Kullanıcı adı ve arkadaş kodu altında ikincil olarak durur. */}
@@ -101,7 +105,7 @@ const UserInfo = ({ onAddFriendClick, onNotificationClick }) => { // onAddFriend
                 </div>
 
                 {/* Sağ: Butonlar */}
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-shrink-0 ml-2">
                     {/* Arkadaş Ekle */}
                     <button
                         onClick={onAddFriendClick} // Tıklayınca Sidebar'daki setView("addFriend") fonksiyonunu çağır
@@ -126,6 +130,8 @@ const UserInfo = ({ onAddFriendClick, onNotificationClick }) => { // onAddFriend
                             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                             className="w-9 h-9 icon-btn relative"
                             title="Bildirimler"
+                            aria-expanded={isDropdownOpen}
+                            onKeyDown={event => { if (event.key === "Escape") setIsDropdownOpen(false); }}
                         >
                             <FaBell />
                             {totalNotifications > 0 && (
@@ -137,7 +143,7 @@ const UserInfo = ({ onAddFriendClick, onNotificationClick }) => { // onAddFriend
 
                         {/* Dropdown Menu */}
                         {isDropdownOpen && (
-                            <div className="absolute left-1/2 -translate-x-1/2 mt-2 w-96 bg-[color:var(--bg-panel)] rounded-lg shadow-lg border border-[color:var(--border-subtle)] z-50">
+                            <div className="absolute right-0 mt-2 w-[min(21rem,calc(100vw-2rem))] bg-[color:var(--bg-panel)] rounded-lg shadow-lg border border-[color:var(--border-subtle)] z-50">
                                 {/* Header */}
                                 <div className="p-3 border-b border-[color:var(--border-subtle)]">
                                     <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>

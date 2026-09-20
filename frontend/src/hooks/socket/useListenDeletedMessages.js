@@ -5,13 +5,13 @@ import useSocket from "../../zustand/useSocket";
 // Karşı taraf bir mesajını sildiğinde açık sohbeti anında güncelle.
 const useListenDeletedMessages = () => {
     const { socket } = useSocket();
-    const { messages, setMessages } = useConversation();
+    const { setMessages } = useConversation();
 
     useEffect(() => {
         if (!socket) return;
 
         socket.on("messageDeleted", ({ messageId }) => {
-            setMessages(messages.map(msg =>
+            setMessages(messages => messages.map(msg =>
                 msg._id === messageId
                     ? { ...msg, message: "This message was deleted", isDeleted: true }
                     : msg
@@ -20,7 +20,7 @@ const useListenDeletedMessages = () => {
 
         return () => socket.off("messageDeleted");
 
-    }, [socket, messages, setMessages]);
+    }, [socket, setMessages]);
 };
 
 export default useListenDeletedMessages;

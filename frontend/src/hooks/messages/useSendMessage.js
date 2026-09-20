@@ -1,136 +1,47 @@
-import { useState } from "react";
-import toast from "react-hot-toast";
-import useConversation from "../../zustand/useConversation";
-import useFriendStore from "../../zustand/useFriend"; // Arkadaş listesi kontrolü için eklendi
-
-// useSendMessage - Mesaj gönderme hook'u
-// MessageInput bileşeninde kullanılır. Hem normal sohbetlerde hem de "draft" sohbetlerde çalışır.
-//
-// 🔑 Draft Conversation Mantığı:
-// Kullanıcı AddFriend'den birine mesaj yazmak istediğinde, sidebar'a henüz eklenmemiş bir
-// "taslak" (draft) conversation oluşur. İlk mesaj gönderildiğinde:
-// 1. Backend conversation'ı otomatik oluşturur (DB'ye kaydeder)
-// 2. Bu hook sidebar'da yeni conversation'ı gösterir
-// Bu "lazy creation" yaklaşımı gereksiz boş conversation'ların DB'de oluşmasını önler.
+import { useRef, useState } from 'react';
+import toast from 'react-hot-toast';
+import useConversation from '../../zustand/useConversation';
+import useFriendStore from '../../zustand/useFriend';
+import apiFetch from '../../utils/apiFetch';
 
 const useSendMessage = () => {
     const [loading, setLoading] = useState(false);
-    const { messages, setMessages, selectedConversation, setSelectedConversation, conversations, setConversations } = useConversation();
-    const friends = useFriendStore((state) => state.friends); // Arkadaş listesini al
-
+    const sending = useRef(false);
     const sendMessage = async (message) => {
-        if (!selectedConversation) {
-            toast.error("No conversation selected");
-            return;
-        }
+        const conversation = useConversation.getState().selectedConversation;
+        if (!conversation || sending.current || !message.trim()) return false;
+        sending.current = true;
         setLoading(true);
         try {
-            // Backend'e POST isteği → /api/messages/send/:receiverId
-            const res = await fetch(`/api/messages/send/${selectedConversation._id}`, {
+            const res = await apiFetch(`/api/messages/send/${conversation._id}`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ message: message })
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: message.trim() }),
             });
-
-            if (res.ok) {
-                const data = await res.json();
-                toast.success("Message sent successfully"); // UX: Sürekli toast çıkması rahatsız edebilir
-
-                // Mesajı local state'e ekle (anında UI'da görünsün)
-                setMessages([...messages, data]);
-
-                // 🔥 DRAFT CONVERSATION → SIDEBAR'A EKLEME
-                const existsInSidebar = conversations.some(c => c._id === selectedConversation._id);
-                if (!existsInSidebar) {
-
-                    // ✅ KRİTİK FIX: Gönderilen kişi zaten arkadaşımız mı kontrol et
-                    // Eğer arkadaşımızsa status "active" olmalı, değilse "pending" (Waiting for reply)
-                    const isFriend = friends.some(f => f._id === selectedConversation._id);
-
-                    const newConv = {
-                        ...selectedConversation,
-                        status: isFriend ? "active" : "pending", // Arkadaşsa aktif, değilse bekleyen
-                        lastMessage: data
-                    };
-
-                    setConversations([newConv, ...conversations]);
-                    setSelectedConversation(newConv);
-                }
-            } else {
-                throw new Error("Failed to send message");
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.message || data.error || 'Mesaj gönderilemedi. Tekrar dene.');
+            const state = useConversation.getState();
+            if (state.selectedConversation?._id === conversation._id) {
+                state.setMessages(items => items.some(item => item._id === data._id) ? items : [...items, data]);
             }
-        } catch (error) {
-            toast.error(error.message);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    return { loading, sendMessage };
-};
-
-export default useSendMessage;
-
-
-/* socket üzerinden anlık mesajlaşma yapılırsa
-
-import { useState } from "react";
-import toast from "react-hot-toast";
-import useConversation from "../zustand/useConversation";
-import useSocket from "../zustand/useSocket";
-import useAuth from "../zustand/useAuth";
-
-const useSendMessage = () => {
-    const [loading, setLoading] = useState(false);
-    const { messages, setMessages, selectedConversation } = useConversation();
-    const { socket } = useSocket();
-    const { authUser } = useAuth();
-
-    const sendMessage = async (message) => {
-        if (!selectedConversation) {
-            toast.error("No conversation selected");
-            return;
-        }
-        
-        if (!socket) {
-            toast.error("Socket not connected");
-            return;
-        }
-
-        setLoading(true);
-        
-        try {
-            // HTTP yerine Socket kullan
-            socket.emit("sendMessage", {
-                receiverId: selectedConversation._id,
-                message: message,
-                senderId: authUser?._id
-            });
-            
-            toast.success("Message sent successfully");
-            
-            // Gönderilen mesajı hemen local state'e ekle (optimistic update) using real authUser._id
-            const newMessage = {
-                _id: Date.now(), // Geçici ID
-                senderId: authUser?._id || "",
-                receiverId: selectedConversation._id,
-                message: message,
-                timestamp: Date.now()
+            const existing = state.conversations.find(item => item._id === conversation._id);
+            const updated = {
+                ...conversation,
+                ...existing,
+                status: existing?.status || (useFriendStore.getState().friends.some(friend => friend._id === conversation._id) ? 'active' : 'pending'),
+                lastMessage: data,
             };
-            
-            setMessages([...messages, newMessage]);
-            
-        } catch {
-            toast.error("Failed to send message");
+            state.setConversations(items => [updated, ...items.filter(item => item._id !== conversation._id)]);
+            if (state.selectedConversation?._id === conversation._id) state.setSelectedConversation(updated);
+            return true;
+        } catch (error) {
+            if (error.name !== 'AbortError') toast.error(error.message);
+            return false;
         } finally {
+            sending.current = false;
             setLoading(false);
         }
     };
-
     return { loading, sendMessage };
 };
-
 export default useSendMessage;
-*/

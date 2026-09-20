@@ -1,3 +1,4 @@
+import Avatar from '../Avatar';
 import useConversation from "../../zustand/useConversation";
 import useSocket from "../../zustand/useSocket";
 import { FaClock } from "react-icons/fa";
@@ -35,8 +36,10 @@ const Conversation = (props) => {
   const lastMessage = props.conversation.lastMessage;
 
   return (
-    <div
-      className={`flex gap-3 items-center px-3 py-2.5 rounded-xl cursor-pointer transition-colors ${isSelected ? 'tile-active' : ''}`}
+    <button
+      type='button'
+      aria-pressed={isSelected}
+      className={`w-full text-left flex gap-3 items-center px-3 py-2.5 rounded-xl cursor-pointer transition-colors ${isSelected ? 'tile-active' : ''}`}
       style={{
         border: `1px solid ${isSelected ? 'var(--border-strong)' : 'transparent'}`
       }}
@@ -50,7 +53,8 @@ const Conversation = (props) => {
     >
       {/* Avatar - online göstergesi ile */}
       <div className='relative flex-shrink-0'>
-        <img
+        <Avatar
+          name={props.conversation.fullName}
           src={props.conversation.profilePic}
           alt=''
           className={`w-11 h-11 avatar-ring ${isOnline ? 'avatar-ring-online' : ''}`}
@@ -106,7 +110,7 @@ const Conversation = (props) => {
           )}
         </div>
       </div>
-    </div>
+    </button>
   );
 };
 

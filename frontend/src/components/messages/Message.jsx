@@ -1,3 +1,4 @@
+import Avatar from '../Avatar';
 import { useState, useEffect, useRef } from 'react';
 import useAuth from "../../zustand/useAuth";
 import useConversation from "../../zustand/useConversation";
@@ -46,7 +47,7 @@ const Message = ({ message, searchTerm = "", showAvatar = true }) => {
                 setShowActions(false);
             }
         };
-        const onKey = (e) => { if (e.key === "Escape") setShowPicker(false); };
+        const onKey = (e) => { if (e.key === "Escape") { setShowPicker(false); setShowActions(false); } };
         document.addEventListener("mousedown", onDown);
         document.addEventListener("keydown", onKey);
         return () => {
@@ -56,8 +57,8 @@ const Message = ({ message, searchTerm = "", showAvatar = true }) => {
     }, [showPicker, showActions]);
 
     // ObjectId/string uyuşmazlığını önlemek için String() kullan
-    const fromMe = String(message.senderId) === String(authUser._id);
-    const profilePic = fromMe ? authUser.profilePic : selectedConversation?.profilePic;
+    const fromMe = String(message.senderId) === String(authUser?._id);
+    const profilePic = fromMe ? authUser?.profilePic : selectedConversation?.profilePic;
 
     const formatTime = () => {
         const ts = message.createdAt || message.timestamp;
@@ -97,6 +98,8 @@ const Message = ({ message, searchTerm = "", showAvatar = true }) => {
                 <div className='flex flex-col gap-2 w-full max-w-md'>
                     <input
                         type='text'
+                        aria-label='Mesajı düzenle'
+                        maxLength={2000}
                         value={editedText}
                         onChange={(e) => setEditedText(e.target.value)}
                         onKeyDown={(e) => {
@@ -131,7 +134,8 @@ const Message = ({ message, searchTerm = "", showAvatar = true }) => {
             {!fromMe && (
                 <div className='w-8 flex-shrink-0'>
                     {showAvatar && (
-                        <img
+                        <Avatar
+                            name={selectedConversation?.fullName}
                             src={profilePic}
                             alt=''
                             className='w-8 h-8 avatar-ring'
@@ -167,6 +171,8 @@ const Message = ({ message, searchTerm = "", showAvatar = true }) => {
                                 className='w-7 h-7 rounded-full flex items-center justify-center text-xs'
                                 style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)' }}
                                 title='Tepki ver'
+                                aria-label='Tepki ver'
+                                aria-expanded={showPicker}
                             >
                                 🙂
                             </button>
@@ -177,6 +183,7 @@ const Message = ({ message, searchTerm = "", showAvatar = true }) => {
                                         className='w-7 h-7 rounded-full flex items-center justify-center text-xs'
                                         style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)' }}
                                         title='Düzenle'
+                                        aria-label='Düzenle'
                                     >
                                         ✏️
                                     </button>
@@ -186,6 +193,7 @@ const Message = ({ message, searchTerm = "", showAvatar = true }) => {
                                         className='w-7 h-7 rounded-full flex items-center justify-center text-xs'
                                         style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)' }}
                                         title='Sil'
+                                        aria-label='Sil'
                                     >
                                         🗑️
                                     </button>
@@ -221,7 +229,7 @@ const Message = ({ message, searchTerm = "", showAvatar = true }) => {
                     <div className='flex gap-1 mt-1 flex-wrap'>
                         {Object.entries(grouped).map(([emoji, count]) => {
                             const mine = (message.reactions || [])
-                                .some(r => r.emoji === emoji && String(r.userId) === String(authUser._id));
+                                .some(r => r.emoji === emoji && String(r.userId) === String(authUser?._id));
                             return (
                                 <button
                                     key={emoji}

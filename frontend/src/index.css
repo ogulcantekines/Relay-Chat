@@ -476,3 +476,17 @@ mark.hit {
   border-radius: 3px;
   padding: 0 2px;
 }
+
+/* Dynamic viewport and safe areas keep controls reachable above mobile keyboards. */
+:root { color-scheme: dark; --text-muted: #8792ae; }
+.app-shell { width: 100%; min-height: 100dvh; display: flex; align-items: center; justify-content: center; }
+.app-shell-chat { height: 100dvh; min-height: 0; }
+.app-shell-auth { height: 100dvh; overflow-y: auto; padding: 1.5rem 1rem; }
+.app-shell-auth > div { margin-block: auto; flex-shrink: 0; }
+.composer { padding-bottom: max(.75rem, env(safe-area-inset-bottom)); }
+.bubble { max-width: min(34rem, 100%); }
+@media (min-width: 640px) { .app-shell-chat { padding: 1rem; } }
+@media (max-width: 639px) { .field { font-size: 1rem; } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; } }
+
+input, textarea, button, select { font-family: inherit; }

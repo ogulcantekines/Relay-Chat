@@ -1,3 +1,4 @@
+import { passwordIsValid } from '../../utils/password';
 import GenderCheckBox from "./GenderCheckBox";
 import { Link } from "react-router-dom";
 import { useState } from "react";
@@ -35,7 +36,7 @@ const SignUp = () => {
 
     // Kullanıcı adı kuralı backend ile aynı: 3-20 karakter, harf/rakam/alt çizgi
     const usernameValid = inputs.username === "" || /^[a-zA-Z0-9_]{3,20}$/.test(inputs.username);
-    const passwordValid = inputs.password === "" || inputs.password.length >= 6;
+    const passwordValid = inputs.password === "" || passwordIsValid(inputs.password);
     const passwordsMatch = inputs.confirmPassword === "" || inputs.password === inputs.confirmPassword;
 
     return (
@@ -63,6 +64,8 @@ const SignUp = () => {
                         </label>
                         <input
                             id='fullName'
+                            maxLength={50}
+                            required
                             type='text'
                             autoComplete='name'
                             placeholder='Ahmet Yılmaz'
@@ -78,6 +81,10 @@ const SignUp = () => {
                         </label>
                         <input
                             id='username'
+                            maxLength={20}
+                            autoCapitalize='none'
+                            spellCheck={false}
+                            required
                             type='text'
                             autoComplete='username'
                             placeholder='kullaniciadin'
@@ -98,16 +105,17 @@ const SignUp = () => {
                         </label>
                         <input
                             id='password'
+                            required
                             type='password'
                             autoComplete='new-password'
-                            placeholder='En az 6 karakter'
+                            placeholder='En az 8 karakter'
                             className='field'
                             value={inputs.password}
                             onChange={(e) => setInputs({ ...inputs, password: e.target.value })}
                         />
                         {!passwordValid && (
                             <span className='text-xs' style={{ color: 'var(--danger)' }}>
-                                Parola en az 6 karakter olmalı
+                                Parola en az 8 karakter ve en fazla 72 UTF-8 bayt olmalı
                             </span>
                         )}
                     </div>
@@ -118,6 +126,7 @@ const SignUp = () => {
                         </label>
                         <input
                             id='confirmPassword'
+                            required
                             type='password'
                             autoComplete='new-password'
                             placeholder='Parolayı tekrar gir'

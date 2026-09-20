@@ -1,12 +1,11 @@
-# React + Vite
+# ChatApp frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React 19, Vite, Tailwind CSS and Zustand. The interface is in Turkish.
 
-Currently, two official plugins are available:
+Run `npm run client` from the repository root for development. Vite serves port
+3000 and proxies `/api` and `/socket.io` to the Express service on port 5000.
+`npm run build` creates `frontend/dist`, which Express serves in production.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+See the [project README](../README.md) for setup, tests and architecture. Shared
+styles live in `src/index.css`; session state and socket ownership live in
+`src/zustand`. HTTP hooks use `apiFetch` to reject responses from an old session.

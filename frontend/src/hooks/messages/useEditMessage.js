@@ -1,15 +1,16 @@
+import apiFetch from '../../utils/apiFetch';
 import {useState} from 'react';
 import toast from 'react-hot-toast';
 import useConversation from '../../zustand/useConversation';
 
 const useEditMessage = () =>{
     const [loading , setLoading] = useState(false);
-    const {messages , setMessages} = useConversation();
+    const { setMessages } = useConversation();
 
     const editMessage = async (messageId, newMessage) => {
         setLoading(true);
         try{
-            const res = await fetch(`/api/messages/edit/${messageId}`, {
+            const res = await apiFetch(`/api/messages/edit/${messageId}`, {
                 method: "PUT",
                 headers: {
                     "Content-Type": "application/json",
@@ -19,20 +20,20 @@ const useEditMessage = () =>{
 
             const data = await res.json();
             if(!res.ok){
-                throw new Error(data.error || "Failed to edit message");
+                throw new Error(data.error || "Mesaj düzenlenemedi");
             }
 
             //burada map ile mesajları dolaşıp düzenlenen mesajı bulup güncelliyoruz. güncelleme kısmında spreading var
-            setMessages(messages.map(msg =>
+            setMessages(messages => messages.map(msg =>
                 msg._id === messageId ? {...msg, message: data.updatedMessage.message,
                      isEdited: data.updatedMessage.isEdited, 
                      editedAt: data.updatedMessage.editedAt} 
                      : msg
             ));
-            toast.success("Message edited successfully");
+            toast.success("Mesaj düzenlendi");
             return true;  // ✅ Başarılı
         }catch (error){
-            toast.error(error.message);
+            if (error.name !== 'AbortError') toast.error(error.message);
             return false;  // ✅ Hata
         }finally {
             setLoading(false);

@@ -1,3 +1,5 @@
+import useFriendStore from '../../zustand/useFriend';
+import apiFetch from '../../utils/apiFetch';
 import { useState } from "react";
 import toast from "react-hot-toast";
 
@@ -18,7 +20,7 @@ const useSendFriendRequest = () => {
             // 2. Zaten bekleyen istek var mı kontrol eder
             // 3. Yoksa yeni FriendRequest belgesi oluşturur (status: "pending")
             // 4. Socket.IO ile karşı tarafa gerçek zamanlı bildirim gönderir
-            const res = await fetch(`/api/friends/send/${userId}`, {
+            const res = await apiFetch(`/api/friends/send/${userId}`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -29,14 +31,15 @@ const useSendFriendRequest = () => {
 
             // Sadece HTTP status code'a bak, message field'ına bakma (backend başarılı olsa bile message dönüyor)
             if (!res.ok) {
-                throw new Error(data.message || "Friend request could not be sent");
+                throw new Error(data.message || "Arkadaşlık isteği gönderilemedi");
             }
 
-            toast.success("Friend request sent!");
+            if (data.friendRequest) useFriendStore.getState().addSentFriendRequest(data.friendRequest);
+            toast.success("Arkadaşlık isteği gönderildi");
             return true; // Başarılı → çağıran yerde aramayı temizlemek için kullanılır
 
         } catch (error) {
-            toast.error(error.message);
+            if (error.name !== 'AbortError') toast.error(error.message);
             return false; // Başarısız
 
         } finally {

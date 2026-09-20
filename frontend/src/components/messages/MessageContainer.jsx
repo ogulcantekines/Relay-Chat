@@ -1,3 +1,4 @@
+import Avatar from '../Avatar';
 import Messages from "./Messages";
 import MessageInput from "./MessageInput";
 import { TiMessages } from "react-icons/ti";
@@ -28,7 +29,7 @@ import useRespondToFriendRequests from "../../hooks/friends/useRespondToFriendRe
 const MessageContainer = () => {
 
     const { selectedConversation, setSelectedConversation, conversations } = useConversation();
-    const { onlineUsers, socket } = useSocket();
+    const { onlineUsers, socket, isConnected, connectionVersion } = useSocket();
     const clearUnread = useUnread((s) => s.clear);
     const { isTyping } = useListenTyping();
     const { clearConversation, loading } = useClearConversation();
@@ -41,13 +42,13 @@ const MessageContainer = () => {
     const isPending = selectedConversation?.status === "pending";
     // isReceiver → Son mesajı BİZ mi gönderdik, yoksa karşı taraf mı?
     // Sadece alıcıysak Accept/Delete banner'ını göster (gönderen kendi isteğini kabul edemez)
-    const isReceiver = selectedConversation?.lastMessage && selectedConversation?.lastMessage?.senderId !== authUser._id;
+    const isReceiver = selectedConversation?.lastMessage && selectedConversation?.lastMessage?.senderId !== authUser?._id;
 
     // ═══════════ ARKADAŞLIK DURUMU BANNER LOGIC ═══════════
     const [isBannerDismissed, setIsBannerDismissed] = useState(false);
     const [searchTerm, setSearchTerm] = useState("");   // sohbet içi mesaj arama
     const [showSearch, setShowSearch] = useState(false);
-    const { friends, incomingFriendRequests, sentFriendRequests, addSentFriendRequest } = useFriendStore();
+    const { friends, incomingFriendRequests, sentFriendRequests } = useFriendStore();
     const { sendFriendRequest, loading: sendFriendLoading } = useSendFriendRequest();
     const { respondToRequest, loading: respondFriendLoading } = useRespondToFriendRequests();
 
@@ -70,7 +71,7 @@ const MessageContainer = () => {
         const success = await sendFriendRequest(selectedConversation._id);
         if (success) {
             // Zustand store'a ekle → banner anında "Request already sent" olarak güncellenir
-            addSentFriendRequest(selectedConversation);
+            // The request hook stores the canonical server response.
         }
     };
 
@@ -85,19 +86,25 @@ const MessageContainer = () => {
     // AddFriend'den "Mesaj Gönder" denildiğinde selectedConversation set ediliyor
     // ama henüz DB'de conversation yok. Backend'e gereksiz sinyal gitmemeli.
     useEffect(() => {
-        const isRealConversation = conversations.some(c => c._id === selectedConversation?._id);
-        if (selectedConversation && socket && isRealConversation) {
-            socket.emit("chatOpened", {
-                otherUserId: selectedConversation._id
-            });
-        }
-        // Sohbet açıldığında o kişiye ait okunmamış rozetini sıfırla
-        if (selectedConversation) clearUnread(selectedConversation._id);
-    }, [selectedConversation, socket, conversations, clearUnread]);
+        const markVisibleChatRead = () => {
+            if (document.visibilityState !== 'visible' || !socket?.connected || !selectedConversation) return;
+            const isRealConversation = conversations.some(item => item._id === selectedConversation._id);
+            if (!isRealConversation) return;
+            socket.emit('chatOpened', { otherUserId: selectedConversation._id });
+            clearUnread(selectedConversation._id);
+        };
+        markVisibleChatRead();
+        document.addEventListener('visibilitychange', markVisibleChatRead);
+        window.addEventListener('focus', markVisibleChatRead);
+        return () => {
+            document.removeEventListener('visibilitychange', markVisibleChatRead);
+            window.removeEventListener('focus', markVisibleChatRead);
+        };
+    }, [selectedConversation, socket, conversations, clearUnread, connectionVersion]);
 
     // Sohbeti temizle butonuna tıklanınca
     const handleClearChat = () => {
-        if (selectedConversation) {
+        if (selectedConversation && window.confirm("Bu sohbetin geçmişi yalnızca senden gizlenecek. Devam edilsin mi?")) {
             clearConversation(selectedConversation._id);
         }
     };
@@ -107,6 +114,7 @@ const MessageContainer = () => {
 
     return (
         <div className="flex flex-col h-full w-full min-w-0 panel-chat">
+            {!isConnected && <div role="status" className="px-4 py-2 text-xs text-center text-amber-200 bg-amber-500/10 flex-shrink-0">Bağlantı yeniden kuruluyor… <button className="underline ml-2" onClick={() => socket?.connect()}>Tekrar bağlan</button></div>}
             {noChatSelected ? <NoChatSelected /> : (<> {/* Sohbet seçilmemişse NoChatSelected, seçilmişse mesaj alanı */}
 
                 {/* ═══════════ HEADER ═══════════ */}
@@ -129,7 +137,8 @@ const MessageContainer = () => {
                     </button>
 
                     <div className='relative flex-shrink-0'>
-                        <img
+                        <Avatar
+                            name={selectedConversation.fullName}
                             src={selectedConversation.profilePic}
                             alt=''
                             className={`w-10 h-10 avatar-ring ${isOnline ? 'avatar-ring-online' : ''}`}
@@ -195,6 +204,8 @@ const MessageContainer = () => {
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             placeholder='Bu sohbette ara...'
+                            aria-label='Bu sohbette ara'
+                            onKeyDown={event => { if (event.key === 'Escape') { setShowSearch(false); setSearchTerm(''); } }}
                             className='field text-sm'
                         />
                     </div>
@@ -230,7 +241,7 @@ const MessageContainer = () => {
                                 disabled={actionLoading}
                                 className="btn btn-sm flex-1 bg-transparent hover:bg-red-500/10 border border-red-500/50 text-red-500 h-11"
                             >
-                                Delete
+                                Reddet
                             </button>
                         </div>
                     </div>
@@ -300,12 +311,12 @@ const MessageContainer = () => {
 
                 {/* ═══════════ MESAJLAR ═══════════ */}
                 <div className="flex-1 min-h-0 flex flex-col">
-                    <Messages searchTerm={searchTerm} />
+                    <Messages key={selectedConversation._id} searchTerm={searchTerm} />
                 </div>
 
                 {/* ═══════════ MESAJ GİRİŞ ALANI ═══════════ */}
                 <div className="flex-shrink-0">
-                    <MessageInput />
+                    <MessageInput key={selectedConversation._id} />
                 </div>
             </>)}
         </div>

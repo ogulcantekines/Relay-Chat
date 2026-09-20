@@ -19,7 +19,7 @@ const useFriendStore = create((set) => ({
 
     // spread operator ile mevcut listeye yeni arkadaşı ekler: [...eskiListe, yeniArkadaş]
     addFriend: (friend) => set((state) => ({
-        friends: [...state.friends, friend]
+        friends: [...state.friends.filter(item => item._id !== friend._id), friend]
     })),
 
     // Arkadaşı listeden çıkar (useRemoveFriend hook'u çağırır)
@@ -34,7 +34,7 @@ const useFriendStore = create((set) => ({
 
     // Yeni gelen istek ekle (socket.io üzerinden gerçek zamanlı bildirim geldiğinde)
     addIncomingFriendRequest: (request) => set((state) => ({
-        incomingFriendRequests: [...state.incomingFriendRequests, request]
+        incomingFriendRequests: [...state.incomingFriendRequests.filter(item => item._id !== request._id), request]
     })),
 
     // Gelen isteği listeden kaldır (kabul veya red edildiğinde)
@@ -49,7 +49,7 @@ const useFriendStore = create((set) => ({
 
     // Yeni gönderilen istek ekle
     addSentFriendRequest: (request) => set((state) => ({
-        sentFriendRequests: [...state.sentFriendRequests, request]
+        sentFriendRequests: [...state.sentFriendRequests.filter(item => item._id !== request._id), request]
     })),
 
     // Gönderilen isteği kaldır (iptal edildiğinde, useCancelRequest hook'u çağırır)
@@ -61,7 +61,8 @@ const useFriendStore = create((set) => ({
 
     // Mesaj isteklerini ayarla (useGetMessageRequests hook'u çağırır)
     // Bunlar arkadaş olunmadan gönderilen mesajlar, pending conversation'dan gelir
-    setMessageRequests: (requests) => set({ messageRequests: requests })
+    setMessageRequests: (requests) => set({ messageRequests: requests }),
+    reset: () => set({ friends: [], incomingFriendRequests: [], sentFriendRequests: [], messageRequests: [] })
 }));
 export default useFriendStore;
 

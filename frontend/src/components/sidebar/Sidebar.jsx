@@ -100,6 +100,7 @@ const Sidebar = () => {
                         value={filter}
                         onChange={(e) => setFilter(e.target.value)}
                         placeholder='Sohbetlerde ara...'
+                        aria-label='Sohbetlerde ara'
                         className='field field-icon text-sm'
                     />
                 </div>

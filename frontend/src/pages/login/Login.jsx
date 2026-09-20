@@ -43,6 +43,9 @@ const Login = () => {
 						</label>
 						<input
 							id='username'
+                            autoCapitalize='none'
+                            spellCheck={false}
+                            required
 							type='text'
 							autoComplete='username'
 							placeholder='kullaniciadin'
@@ -62,6 +65,7 @@ const Login = () => {
 						<div className='relative'>
 							<input
 								id='password'
+                                required
 								type={showPassword ? 'text' : 'password'}
 								autoComplete='current-password'
 								placeholder='••••••••'
