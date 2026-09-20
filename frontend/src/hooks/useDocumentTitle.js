@@ -3,7 +3,7 @@ import useUnread from '../zustand/useUnread';
 
 // Sekme başlığında toplam okunmamış mesaj sayısını gösterir:
 // başka sekmedeyken yeni mesaj geldiği fark edilsin diye.
-const BASE_TITLE = 'ChatApp';
+const BASE_TITLE = 'Relay';
 
 const useDocumentTitle = () => {
     const { counts } = useUnread();

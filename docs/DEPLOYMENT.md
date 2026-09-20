@@ -17,7 +17,7 @@ the private `mongo` service; the host's development database is not used.
 | `CLIENT_URL` | `http://localhost:5000` | Additional permitted browser origin |
 | `COOKIE_SECURE` | `false` | Set true only when serving HTTPS |
 | `TRUST_PROXY` | `0` | Trusted reverse-proxy hops; never enable without that topology |
-| `APP_IMAGE` | `mern-chatapp:local` | Image tag, useful for testing and rollback |
+| `APP_IMAGE` | `relay-chat:local` | Image tag, useful for testing and rollback |
 
 Use `docker compose config --quiet` to validate configuration without printing
 secrets. `/api/health` checks the process; `/api/ready` returns 503 if the database
@@ -29,17 +29,17 @@ Back up the database before an update. Build an explicit tag so the previous
 image stays available (examples below use a POSIX shell):
 
 ```bash
-APP_IMAGE=mern-chatapp:release-1 docker compose build app
-APP_IMAGE=mern-chatapp:release-1 docker compose up -d --wait
+APP_IMAGE=relay-chat:release-1 docker compose build app
+APP_IMAGE=relay-chat:release-1 docker compose up -d --wait
 ```
 
 To roll back code, select the previous tag and avoid rebuilding it:
 
 ```bash
-APP_IMAGE=mern-chatapp:previous-tag docker compose up -d --no-build --wait
+APP_IMAGE=relay-chat:previous-tag docker compose up -d --no-build --wait
 ```
 
-PowerShell uses `$env:APP_IMAGE = 'mern-chatapp:release-1'` before the Compose
+PowerShell uses `$env:APP_IMAGE = 'relay-chat:release-1'` before the Compose
 commands. Image rollback does not undo database changes. This release preserves
 existing accounts/messages, but older JWT cookies require a new login because
 sessions are now tracked server-side. New conversation writes retain only the
@@ -53,8 +53,8 @@ redirection, so they work in PowerShell too. Create a `backups` directory first.
 Use a unique filename for each backup.
 
 ```bash
-docker compose exec -T mongo mongodump --db chatapp --archive=/tmp/chatapp-backup.gz --gzip
-docker compose cp mongo:/tmp/chatapp-backup.gz backups/chatapp-backup.gz
+docker compose exec -T mongo mongodump --db relay --archive=/tmp/relay-backup.gz --gzip
+docker compose cp mongo:/tmp/relay-backup.gz backups/relay-backup.gz
 ```
 
 Archives contain private messages and password hashes. Keep them outside Git,
@@ -64,9 +64,9 @@ To restore, stop the app first and copy the chosen archive back into MongoDB:
 
 ```bash
 docker compose stop app
-docker compose cp backups/chatapp-backup.gz mongo:/tmp/chatapp-restore.gz
+docker compose cp backups/relay-backup.gz mongo:/tmp/relay-restore.gz
 # --drop replaces the collections in the archive. Verify the target first.
-docker compose exec -T mongo mongorestore --archive=/tmp/chatapp-restore.gz --gzip --drop
+docker compose exec -T mongo mongorestore --archive=/tmp/relay-restore.gz --gzip --drop
 docker compose up -d --wait
 ```
 

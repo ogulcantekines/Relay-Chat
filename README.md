@@ -1,4 +1,8 @@
-# MERN Chat App
+# Relay
+
+[![CI](https://github.com/ogulcantekines/Relay-Chat/actions/workflows/ci.yml/badge.svg)](https://github.com/ogulcantekines/Relay-Chat/actions/workflows/ci.yml)
+[![Security](https://github.com/ogulcantekines/Relay-Chat/actions/workflows/security.yml/badge.svg)](https://github.com/ogulcantekines/Relay-Chat/actions/workflows/security.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 A responsive one-to-one messenger built with React, Express, MongoDB and
 Socket.IO. Friend requests, message requests, read receipts and reactions share

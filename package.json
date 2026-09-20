@@ -1,5 +1,5 @@
 {
-  "name": "mern-chatapp",
+  "name": "relay-chat",
   "version": "1.0.0",
   "main": "server.js",
   "scripts": {
@@ -22,7 +22,7 @@
   "keywords": [],
   "author": "",
   "license": "MIT",
-  "description": "Real-time chat application built with the MERN stack and Socket.IO",
+  "description": "Relay — real-time chat application built with the MERN stack and Socket.IO",
   "dependencies": {
     "bcryptjs": "^3.0.2",
     "compression": "^1.8.2",

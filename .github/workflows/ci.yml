@@ -117,10 +117,10 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     env:
-      APP_IMAGE: mern-chatapp:ci
+      APP_IMAGE: relay-chat:ci
       APP_PORT: 5000
       CLIENT_URL: http://localhost:5000
-      COMPOSE_PROJECT_NAME: chatapp-ci
+      COMPOSE_PROJECT_NAME: relay-ci
 
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
@@ -149,7 +149,7 @@ jobs:
       - name: Scan the runtime image
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
-          image-ref: mern-chatapp:ci
+          image-ref: relay-chat:ci
           version: v0.74.0
           scanners: vuln
           format: table
