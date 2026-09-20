@@ -1,67 +1,48 @@
 # Contributing
 
-## Workflow
-
-`main` is protected by CI and is meant to stay deployable. Work happens on
-short-lived branches that are merged through pull requests.
+Use short-lived branches and keep each commit focused on a reviewable behavior.
+Examples: `fix/socket-auth`, `feat/message-search`, `docs/local-setup`.
 
 ```bash
-git switch -c feat/message-search    # branch off main
-# ... make the change ...
-npm run lint && npm run test:all     # check before pushing
-git push -u origin feat/message-search
-gh pr create --fill                  # or open the PR on GitHub
-```
-
-Merge once CI is green. Squash merging keeps the history on `main` readable.
-
-## Branch names
-
-| Prefix      | For                                   |
-|-------------|---------------------------------------|
-| `feat/`     | a new capability                      |
-| `fix/`      | a bug fix                             |
-| `refactor/` | a change with no behavioural effect   |
-| `perf/`     | a performance change                  |
-| `docs/`     | documentation only                    |
-| `chore/`    | tooling, dependencies, configuration  |
-| `ci/`       | workflow changes                      |
-
-## Commit messages
-
-Commits follow [Conventional Commits](https://www.conventionalcommits.org/):
-a `type: summary` subject in the imperative mood, under 72 characters, with
-a body that explains why the change was needed when that is not obvious.
-
-```
-fix: stop message bubbles collapsing to one character per line
-
-The bubble had max-width: 78%, but its parent was a min-w-0 flex column
-with no resolved width, so the percentage resolved against zero.
-```
-
-## Checks
-
-Every push and pull request runs:
-
-| Workflow   | Checks                                                     |
-|------------|------------------------------------------------------------|
-| `ci`       | lint, frontend build, HTTP smoke test, socket test, Docker  |
-| `security` | CodeQL, `npm audit` on both workspaces, gitleaks            |
-
-Run the same checks locally before opening a pull request:
-
-```bash
+git switch -c fix/your-change
 npm run lint
+# Set MONGO_URI explicitly to a disposable database and select a free PORT first.
 npm run test:all
-docker compose up --build
 ```
 
-## Tests
+See the [README](README.md#verify-changes) for full test setup. Each test starts its
+own server; the browser test needs a built frontend and Playwright Chromium.
+`npm run test:all` builds the frontend before running all suites.
 
-`scripts/smoke-test.js` drives the REST API end to end. `scripts/realtime-test.js`
-connects two real Socket.IO clients and asserts that events reach the other
-side. Both start their own server and need a reachable `MONGO_URI`.
+## Commits and review
 
-New endpoints belong in the smoke test; new socket events belong in the
-real-time test.
+Use Conventional Commit subjects such as `fix: validate socket sessions` or
+`docs: explain local Docker setup`. Group related fixes, keep truthful timestamps,
+and explain the behavior change when it is not obvious from the diff. Keep secrets,
+local reports, database exports and personal study notes outside Git.
+
+Before opening a pull request, run the relevant checks and describe what changed,
+why, and how it was verified. Include real screenshots for visible changes. Add
+regression coverage for security boundaries or bugs with a reproducible failure;
+avoid tests that merely restate an implementation.
+
+## GitHub setup after publication
+
+The local repository includes CI configuration, but no GitHub rules are created by
+these files. After the first workflow run, configure a ruleset for `main` requiring
+pull requests and the CI/security checks. Disallow force pushes and branch deletion.
+Choose squash merge if one commit per completed change is preferable.
+
+[GitHub's protected-branch documentation](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches)
+explains the repository-side settings. A passing local test run is not evidence
+that GitHub Actions has already run.
+
+## Where to add tests
+
+- HTTP flows: `scripts/smoke-test.js`.
+- Realtime events: `scripts/realtime-test.js`.
+- Security/authorization regressions: `scripts/security-test.js`.
+- User-visible desktop/mobile behavior: `scripts/ui-test.js`.
+
+All suites use `scripts/test-server.js` to isolate their process configuration and
+reject occupied ports. Never run them against a production database.
