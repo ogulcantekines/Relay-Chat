@@ -144,7 +144,10 @@ jobs:
           curl --fail --silent http://localhost:5000/ | grep -q '<div id="root">'
           test "$(docker compose exec -T app id -u)" != 0
           test "$(docker inspect "$(docker compose ps -q app)" --format '{{.HostConfig.ReadonlyRootfs}}')" = true
-          test -z "$(docker compose port mongo 27017 2>/dev/null || true)"
+          # "docker compose port" bazı sürümlerde yayınlanmamış bir port için
+          # boş yerine ":0" döndürüyor, bu da kontrolü hatalı biçimde
+          # başarısız kılıyordu. Bağlamaların asıl kaynağını okuyoruz.
+          test "$(docker inspect "$(docker compose ps -q mongo)" --format '{{json .HostConfig.PortBindings}}')" = '{}' 
 
       - name: Scan the runtime image
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
