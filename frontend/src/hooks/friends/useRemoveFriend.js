@@ -1,3 +1,4 @@
+import apiFetch from '../../utils/apiFetch';
 import { useState } from "react";
 import toast from "react-hot-toast";
 import useFriendStore from "../../zustand/useFriend";
@@ -21,7 +22,7 @@ const useRemoveFriend = () => {
             // 1. User.findById ile her iki kullanıcıyı bulur
             // 2. $pull operatörü ile her iki kullanıcının friends dizisinden birbirinin ID'sini çıkarır
             // 3. Her iki kullanıcıyı kaydeder
-            const res = await fetch(`/api/friends/remove/${friendId}`, {
+            const res = await apiFetch(`/api/friends/remove/${friendId}`, {
                 method: "DELETE",
                 headers: {
                     "Content-Type": "application/json",
@@ -30,7 +31,7 @@ const useRemoveFriend = () => {
             const data = await res.json();
 
             if (!res.ok) {
-                throw new Error(data.message || "Failed to remove friend");
+                throw new Error(data.message || "Arkadaş listeden çıkarılamadı");
             }
 
             // Zustand store'dan arkadaşı kaldır → UI anında güncellenir
@@ -38,7 +39,7 @@ const useRemoveFriend = () => {
             toast.success(data.message);
 
         } catch (error) {
-            toast.error(error.message);
+            if (error.name !== 'AbortError') toast.error(error.message);
 
         } finally {
             setLoading(false);

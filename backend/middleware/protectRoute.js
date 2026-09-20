@@ -1,23 +1,14 @@
-import jwt from "jsonwebtoken";
-
+import { verifySession } from "../utils/session.js";
 
 const protectRoute = async (req, res, next) => {
-    const token = req.cookies.token || ""; //çerezdeki token'ı al
-    
-    if (!token) {
-        return res.status(401).send({message: "Unauthorized: No token provided"});
-    }
-
     try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET); //token'ı doğrula içindeki secret ile  process.env.JWT_SECRET aynı mı verify et eğer doğruysa decode'a at
+        // Validate both the signature and its persisted session record.
+        const decoded = await verifySession(req.cookies.token || "");
         req.userId = decoded.id;
+        req.sessionId = decoded.jti;
         next();
-    } catch (error) {
-        console.error("Error verifying token:", error);
-        res.status(401).send({message: "Unauthorized: Invalid token"});
+    } catch {
+        res.status(401).json({ message: "Unauthorized: Invalid session" });
     }
-
 };
-
 export default protectRoute;
-    

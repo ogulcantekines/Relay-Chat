@@ -1,3 +1,4 @@
+import apiFetch from '../../utils/apiFetch';
 import { useState } from "react";
 import toast from "react-hot-toast";
 import useFriendStore from "../../zustand/useFriend";
@@ -16,7 +17,7 @@ const useCancelRequest = () => {
             // Backend'e DELETE isteği → /api/friends/cancel/:requestId
             // cancelFriendRequest controller'ı çalışır:
             // FriendRequest.findByIdAndDelete(requestId) ile belgeyi tamamen siler
-            const res = await fetch(`/api/friends/cancel/${requestId}`, {
+            const res = await apiFetch(`/api/friends/cancel/${requestId}`, {
                 method: "DELETE",
                 headers: {
                     "Content-Type": "application/json",

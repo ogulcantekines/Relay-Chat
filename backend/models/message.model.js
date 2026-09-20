@@ -71,6 +71,7 @@ const messageSchema = new mongoose.Schema({
 messageSchema.index({ senderId: 1, receiverId: 1, isRead: 1 });
 messageSchema.index({ clearedBy: 1 });
 messageSchema.index({ timestamp: -1 });
+messageSchema.index({ senderId: 1, receiverId: 1, _id: -1 });
 
 const Message = mongoose.model("Message", messageSchema);
 export default Message;

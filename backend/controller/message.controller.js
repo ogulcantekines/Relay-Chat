@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { validId } from "../utils/validation.js";
 import Conversation from "../models/conversation.model.js";
 import Message from "../models/message.model.js";
 import { getReceiverSocketId, io } from "../socket/socket.js";
@@ -11,13 +12,15 @@ export const sendMessage = async (req, res) => {
         const { message } = req.body; // request body den mesajı al
         const senderId = req.userId; // protectRoute middleware den gelen userId (giriş yapan kullanıcı)
 
-        if (!message || message.trim() === "") {
+        if (typeof message !== "string" || message.trim() === "") {
             return res.status(400).json({ error: "Message content cannot be empty" });
         }
         if (message.length > 2000) {
             return res.status(400).json({ error: "Message cannot exceed 2000 characters" });
         }
 
+        if (receiverId === senderId) return res.status(400).json({ error: "Cannot message yourself" });
+        if (!await User.exists({ _id: receiverId })) return res.status(404).json({ error: "User not found" });
         const sender = await User.findById(senderId); //senderId ile user collectionından kullanıcı bul
         const isFriend = sender.friends.includes(receiverId); //senderId ve receiverId yi içeren bir arkadaş mı kontrol et
 
@@ -26,11 +29,12 @@ export const sendMessage = async (req, res) => {
         );
 
         if (!conversation) { // konuşma yoksa yeni konuşma oluştur
-            conversation = await Conversation.create({
+            conversation = await Conversation.findOneAndUpdate({ pairKey: [senderId, receiverId].sort().join(":") }, { $setOnInsert: {
+                pairKey: [senderId, receiverId].sort().join(":"),
                 participants: [senderId, receiverId],
                 messages: [],
-                status: isFriend ? "active" : "pending" //arakdaslık ile eklendi arkadaslarsa aktif değilse bekleyen konusma olur
-            });
+                status: isFriend ? "active" : "pending" // Friendship determines the initial request state.
+            } }, { upsert: true, new: true });
         }
 
         //eğer conversation varsa ve status pending ise
@@ -55,14 +59,15 @@ export const sendMessage = async (req, res) => {
         const newMessage = new Message({ // message modeline uygun messages collectionına yeni mesaj
             senderId: senderId,
             receiverId: receiverId,
-            message: message,
+            message: message.trim(),
         });
 
         if (newMessage) {
-            conversation.messages.push(newMessage._id);  // konuşmanın messages arrayine yeni mesajın id sini ekle. Get message da populate etmek için hayati
+            conversation.messages = [newMessage._id]; // Keep only the preview reference; history is queried from Message.
         }
         // Mesaj ve konuşmayı paralel olarak kaydet - performans için
-        await Promise.all([conversation.save(), newMessage.save()]);
+        await newMessage.save();
+        await conversation.save();
 
         // SOCKET.IO - Real-time mesaj gönderimi - alıcı online ise anında ilet bu dbye kaydedildikten sonra anlık olarak websocket ile gönder
         const receiverSocketId = getReceiverSocketId(receiverId);
@@ -77,6 +82,7 @@ export const sendMessage = async (req, res) => {
                     username: sender.username,
                     profilePic: sender.profilePic
                 },
+                conversationId: conversation._id,
                 conversationStatus: conversation.status
             });
         }
@@ -85,7 +91,7 @@ export const sendMessage = async (req, res) => {
         res.status(201).json(newMessage);
     } catch (error) {
         console.error("Error sending message:", error);
-        res.status(500).send("Internal Server Error");
+        res.status(500).json({ error: "Internal Server Error" });
     }
 
 };
@@ -93,31 +99,20 @@ export const sendMessage = async (req, res) => {
 // belirli bir kullanıcıyla olan mesajları al
 export const getMessage = async (req, res) => {
     try {
-        const { id: userToChatId } = req.params;
-        const senderId = req.userId; // protectRoute middleware den gelen userId (giriş yapan kullanıcı)
-
-        const conversation = await Conversation.findOne({
-            participants: { $all: [senderId, userToChatId] }
-        }).populate({
-            path: "messages",
-            // Bu kullanıcı sohbeti temizlediyse, temizlemeden önceki mesajlar
-            // ona gösterilmez. Kayıtlar durduğu için karşı tarafın geçmişi
-            // etkilenmez.
-            match: { clearedBy: { $ne: senderId } }
-        });
-
-        if (!conversation) {
-            return res.status(200).json([]);
-        }
-
-        // populate match'i eşleşmeyenleri ayıklar; kalanlar bu kullanıcının görebildikleri
-        const messages = conversation.messages;
-        res.status(200).json(messages);
-
-    } catch (error) {
-        console.error("Error fetching messages:", error);
-        res.status(500).json({ error: "Internal Server Error" });
-    }
+        const peerId = req.params.id;
+        const userId = req.userId;
+        const { before } = req.query;
+        const limit = req.query.limit === undefined ? 50 : Number(req.query.limit);
+        if ((before !== undefined && !validId(before)) || !Number.isInteger(limit) || limit < 1 || limit > 50) return res.status(400).json({ error: "Invalid message cursor or limit" });
+        const filter = {
+            $or: [{ senderId: userId, receiverId: peerId }, { senderId: peerId, receiverId: userId }],
+            clearedBy: { $ne: userId },
+            ...(before ? { _id: { $lt: before } } : {})
+        };
+        const messages = await Message.find(filter).sort({ _id: -1 }).limit(limit + 1).lean();
+        res.setHeader("X-Has-More", String(messages.length > limit));
+        res.status(200).json(messages.slice(0, limit).reverse());
+    } catch { res.status(500).json({ error: "Internal Server Error" }); }
 };
 
 // sohbeti temizleme fonksiyonu
@@ -134,44 +129,18 @@ export const clearConversation = async (req, res) => {
             return res.status(404).json({ error: "Conversation not found" });
         }
 
-        // Bekleyen istek reddediliyor demektir: henüz kabul edilmemiş bir
-        // sohbetin kalıcı olmasının anlamı yok, iki taraftan da kaldırılır.
-        if (conversation.status === "pending") {
-            const deletedCount = conversation.messages.length;
-            await Message.deleteMany({ _id: { $in: conversation.messages } });
+        const pair = { $or: [{ senderId, receiverId: userToChatId }, { senderId: userToChatId, receiverId: senderId }] };
+        // Only the receiver can decline a pending request for both participants.
+        const firstMessage = await Message.findOne(pair).sort({ _id: 1 });
+        if (conversation.status === "pending" && firstMessage?.receiverId.toString() === senderId) {
+            const result = await Message.deleteMany(pair);
             await Conversation.findByIdAndDelete(conversation._id);
-            return res.status(200).json({
-                message: "Pending request deleted completely",
-                deletedCount
-            });
+            return res.status(200).json({ message: "Pending request declined", deletedCount: result.deletedCount });
         }
-
-        // ═══ YALNIZCA BU KULLANICI İÇİN TEMİZLE ═══
-        // Mesajlar silinmiyor, yalnızca clearedBy listesine bu kullanıcı ekleniyor.
-        // $addToSet aynı kullanıcının iki kez eklenmesini engeller.
-        const result = await Message.updateMany(
-            {
-                _id: { $in: conversation.messages },
-                clearedBy: { $ne: senderId }
-            },
-            { $addToSet: { clearedBy: senderId } }
-        );
-
-        // Her iki taraf da temizlediyse mesajlar artık kimseye görünmüyor;
-        // veritabanında tutmanın anlamı kalmadığı için kalıcı olarak silinir.
-        const orphaned = await Message.find({
-            _id: { $in: conversation.messages },
-            clearedBy: { $all: conversation.participants }
-        }).select("_id");
-
-        if (orphaned.length > 0) {
-            const ids = orphaned.map(m => m._id);
-            await Message.deleteMany({ _id: { $in: ids } });
-            conversation.messages = conversation.messages.filter(
-                id => !ids.some(o => o.equals(id))
-            );
-            await conversation.save();
-        }
+        // Clearing an accepted conversation only hides this user's history.
+        const result = await Message.updateMany({ ...pair, clearedBy: { $ne: senderId } }, { $addToSet: { clearedBy: senderId } });
+        // The preview reference may outlive a removed message; populate safely omits it.
+        await Message.deleteMany({ ...pair, clearedBy: { $all: conversation.participants } });
 
         res.status(200).json({
             message: "Conversation cleared",
@@ -205,7 +174,7 @@ export const editMessage = async (req, res) => {
             return res.status(400).json({ error: "A deleted message cannot be edited" });
         }
 
-        if (!newMessage || newMessage.trim() === "") { //yeni mesaj boşsa
+        if (typeof newMessage !== "string" || newMessage.trim() === "") { //yeni mesaj boşsa
             return res.status(400).json({ error: "Message content cannot be empty" });
         }
         if (newMessage.length > 2000) {
@@ -312,6 +281,7 @@ export const getUnreadCounts = async (req, res) => {
                 $match: {
                     receiverId: new mongoose.Types.ObjectId(userId),
                     isRead: false,
+                    isDeleted: { $ne: true },
                     // Kullanıcının temizlediği mesajlar okunmamış sayılmaz
                     clearedBy: { $ne: new mongoose.Types.ObjectId(userId) }
                 }

@@ -1,327 +1,154 @@
-# MERN Chat App
+# Relay
 
-[![CI](https://github.com/ogulcantekines/MERN-ChatApp/actions/workflows/ci.yml/badge.svg)](https://github.com/ogulcantekines/MERN-ChatApp/actions/workflows/ci.yml)
-[![Security](https://github.com/ogulcantekines/MERN-ChatApp/actions/workflows/security.yml/badge.svg)](https://github.com/ogulcantekines/MERN-ChatApp/actions/workflows/security.yml)
+[![CI](https://github.com/ogulcantekines/Relay-Chat/actions/workflows/ci.yml/badge.svg)](https://github.com/ogulcantekines/Relay-Chat/actions/workflows/ci.yml)
+[![Security](https://github.com/ogulcantekines/Relay-Chat/actions/workflows/security.yml/badge.svg)](https://github.com/ogulcantekines/Relay-Chat/actions/workflows/security.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-Real-time messaging application built with the MERN stack (MongoDB, Express, React, Node.js) and Socket.IO.
+A responsive one-to-one messenger built with React, Express, MongoDB and
+Socket.IO. Friend requests, message requests, read receipts and reactions share
+a Turkish dark interface that works on desktop and mobile.
 
-Users register, find each other by username or a short friend code, send friend requests, and chat in real time with typing indicators, read receipts and message editing.
+Started in 2025 as a hands-on MERN learning project; revisited in 2026 with a focus
+on reliable realtime behavior, security regression tests and reproducible Docker
+packaging. The original explanatory comments are kept in the source.
 
-## Features
+![Desktop conversation](docs/screenshots/desktop-chat.png)
 
-**Authentication**
-- Signup / login with hashed passwords (bcrypt)
-- JWT stored in an httpOnly cookie
-- Protected API routes via middleware
+<details>
+<summary>Mobile view</summary>
 
-**Profile**
-- Edit display name and avatar
-- Change password, verified against the current one
+<img src="docs/screenshots/mobile-chat.png" width="300" alt="A conversation on a mobile screen" />
 
-**Friends**
-- Search users by username or 4-character friend code
-- Send, accept, reject and cancel friend requests
-- Friend list with remove support
+</details>
 
-**Security**
-- Content security policy and hardened headers via helmet
-- Rate limited authentication, keyed per account
-- Passwords hashed with bcrypt, session in an httpOnly cookie
+## What it does
 
-**Messaging**
-- One-to-one conversations, persisted in MongoDB
-- Real-time delivery over Socket.IO
-- Typing indicators
-- Read receipts
-- Message editing and deletion (sender only)
-- Emoji reactions
-- Unread badges per conversation and in the tab title
-- Search within a conversation, with matches highlighted
-- Day separators and grouped consecutive messages
-- Clear conversation history
-- Online / offline presence
+- Cookie-based login, editable profiles and password changes with session revocation.
+- Find people by username or friend code; send, accept, reject and cancel requests.
+- Persistent direct messages, typing, online presence, read receipts and unread counts.
+- Edit/delete your messages, add emoji reactions and clear your own history.
+- Load older messages in pages; search the loaded conversation.
+- Recover state after reconnecting and keep your draft when a send fails.
+- Keyboard-accessible account settings and responsive desktop/mobile layouts.
 
-## Tech Stack
+## Run locally with Docker
 
-| Layer     | Technology                                              |
-|-----------|---------------------------------------------------------|
-| Frontend  | React 19, Vite, Tailwind CSS, daisyUI, Zustand           |
-| Backend   | Node.js, Express 5, Mongoose                             |
-| Realtime  | Socket.IO                                                |
-| Database  | MongoDB                                                  |
-| Auth      | JSON Web Tokens, bcryptjs                                |
+Requires Docker Engine/Desktop with Compose v2 or newer. No local Node.js or
+MongoDB installation is needed.
 
-## Quick Start with Docker
+1. Clone/download the repository and open its directory.
+2. Copy `.env.example` to `.env` (`cp .env.example .env` on Linux/macOS,
+   `Copy-Item .env.example .env` in PowerShell). Keep an existing `.env` if you have one.
+3. Generate a secret and paste it into `JWT_SECRET` in `.env`:
 
-The fastest way to run the whole stack, including MongoDB:
+   ```bash
+   docker run --rm node:22-alpine node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
+   ```
 
-```bash
-# A secret is required; generate one and keep it out of version control
-echo "JWT_SECRET=$(node -e "console.log(require('crypto').randomBytes(48).toString('hex'))")" > .env
+4. Start both services:
 
-docker compose up --build
-```
+   ```bash
+   docker compose up --build --detach --wait
+   ```
 
-The app is then available at <http://localhost:5000>.
+Open **http://localhost:5000**. Register two accounts in separate browser profiles
+or a regular/incognito window to try messaging. No shared demo password is shipped.
 
-### Using it from another device
-
-The container listens on every interface, so anything on the same network
-can reach it at `http://<your-machine-ip>:5000` — a phone, for instance.
-Sign in on both devices and messages arrive live over the socket.
-
-Two settings matter here. `COOKIE_SECURE` must stay `false` over plain
-HTTP, or the browser discards the session cookie and every request comes
-back 401. The client picks up the socket address from the page it was
-served from, so no extra configuration is needed.
-
-On Windows the firewall may ask to allow the port the first time.
-
-Worth knowing: Docker Desktop on Windows and macOS forwards the port
-through a user-space proxy that terminates the TCP connection and opens a
-new one, so the original client address never reaches the app — every
-request appears to come from the bridge gateway. A Linux host forwards
-with real DNAT and the address survives.
-
-Because of that, the auth rate limit counts attempts per account rather
-than per address alone, so one device exhausting the limit cannot lock
-everyone else out.
-
-To stop it, and to also drop the database volume:
+If port 5000 is busy, set `APP_PORT=5010` and
+`CLIENT_URL=http://localhost:5010` in `.env`, then open that address.
 
 ```bash
-docker compose down     # stop
-docker compose down -v  # stop and delete stored data
+docker compose ps            # app and database health
+docker compose logs -f app   # server logs
+docker compose down          # stop; saved messages remain in the named volume
 ```
 
-## Getting Started
+The app port binds to **127.0.0.1** by default. MongoDB is not exposed on the host.
+`docker compose down --volumes` permanently removes the database; it is not needed
+for normal restarts or upgrades.
 
-If you would rather run the services directly on your machine:
+## Develop without Docker
 
-### Requirements
-
-- Node.js 18 or newer
-- A MongoDB database (local instance or MongoDB Atlas)
-
-### 1. Clone and install
+Use **Node.js 22.12+** and a reachable MongoDB 7 database. Set `MONGO_URI` and
+`JWT_SECRET` in `.env`, with `NODE_ENV=development` and
+`CLIENT_URL=http://localhost:3000`.
 
 ```bash
-git clone <repository-url>
-cd MERN-ChatApp
-
-npm install                  # backend dependencies
-cd frontend && npm install   # frontend dependencies
-cd ..
+npm run install:all  # npm ci for both lockfiles
+npm run dev         # terminal 1: API on port 5000
+npm run client      # terminal 2: Vite on port 3000
 ```
 
-### 2. Configure environment
+Vite proxies HTTP and Socket.IO to Express. For a production build, run
+`npm run build`, set `NODE_ENV=production`, then `npm start`.
 
-Copy the example file and fill in your own values:
+## Verify changes
+
+Tests start their own server. They require an **explicit disposable** `MONGO_URI`
+and reject a port already used by another application. They do not fall back to
+the database in `.env`.
 
 ```bash
-cp .env.example .env
+# Optional local database used only for tests
+docker run -d --name chatapp-test-db -p 127.0.0.1:27018:27017 mongo:7
+npm run install:all
+npx --no-install playwright install chromium
+npm run lint
 ```
 
-| Variable     | Description                                                        |
-|--------------|--------------------------------------------------------------------|
-| `PORT`       | Port the API server listens on (default `5000`)                     |
-| `MONGO_URI`  | MongoDB connection string                                           |
-| `JWT_SECRET` | Secret used to sign JWTs — use a long random value                  |
-| `NODE_ENV`   | `production` serves the built frontend from Express                 |
-| `COOKIE_SECURE` | `true` behind HTTPS; must be `false` over plain HTTP             |
-| `CLIENT_URL` | Origin allowed by Socket.IO CORS (default `http://localhost:3000`)   |
-
-Generate a strong secret with:
+Linux/macOS:
 
 ```bash
-node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
+MONGO_URI=mongodb://127.0.0.1:27018/chatapp_test PORT=5100 npm run test:all
 ```
 
-> If you use MongoDB Atlas, add your current IP address to the cluster's
-> IP Access List, otherwise the server will exit with a connection error.
+PowerShell:
 
-### 3. Run
-
-Start the API server (terminal 1):
-
-```bash
-npm run dev
+```powershell
+$env:MONGO_URI = 'mongodb://127.0.0.1:27018/chatapp_test'
+$env:PORT = '5100'
+npm run test:all
 ```
 
-Start the React client (terminal 2):
+| Command | Coverage |
+| --- | --- |
+| `npm test` | HTTP auth, friends, messaging, profiles and clearing |
+| `npm run test:realtime` | Real Socket.IO delivery between authenticated clients |
+| `npm run test:security` | Impersonation, revocation, origin/ownership/input checks, pagination |
+| `npm run test:ui` | Real Chromium: desktop/mobile chat, settings, failed sends and logout |
+| `npm run test:all` | Build and all four test suites |
 
-```bash
-npm run client
-```
+The browser suite saves screenshots and traces under `test-results/`. Inspect a
+trace with `npx --no-install playwright show-trace test-results/desktop-trace.zip`.
 
-The client runs on <http://localhost:3000> and proxies `/api` requests to the
-server on port `5000`.
+## CI and security
 
-### Production build
+GitHub Actions runs on pull requests to `main`, pushes to `main`/`release/**`, and
+manual dispatch. It checks syntax, lint/build, integration/browser/security tests,
+and the actual Compose stack. A separate workflow performs dependency auditing,
+CodeQL analysis and full-history secret scanning; the container job scans its
+runtime image. Actions use pinned revisions and scoped permissions. Test logs
+and browser traces are retained as artifacts.
 
-```bash
-npm run build   # builds the frontend into frontend/dist
-npm start       # runs the API server without nodemon
-```
+Repository rules still need to be enabled on GitHub after publishing. Workflow
+files alone do not protect `main`. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
-## Project Structure
+This is a **single-instance, self-hosted application**. Messages are stored on the
+server without end-to-end encryption. Group chat, uploads, calling, password
+recovery and moderation are outside its current scope. See [SECURITY.md](SECURITY.md)
+for reporting and security boundaries. Automated checks are not a completed pentest.
 
-```
-backend/
-  config/       environment loading
-  controller/   route handlers (auth, friends, messages, conversations)
-  db/           MongoDB connection
-  middleware/   JWT route protection
-  models/       Mongoose schemas
-  routes/       Express routers
-  socket/       Socket.IO server and event handlers
-  utils/        token and friend-code helpers
+## Documentation
 
-frontend/src/
-  components/   UI components (sidebar, messages, modals)
-  hooks/        data fetching and socket listeners
-  pages/        login, signup, home
-  zustand/      client state stores
-```
+- [Local verification results](docs/VERIFICATION.md)
+- [Architecture and design limits](docs/ARCHITECTURE.md)
+- [API, pagination and socket events](docs/API.md)
+- [Docker operations, backups and optional hosting](docs/DEPLOYMENT.md)
+- [Contribution and commit workflow](CONTRIBUTING.md)
 
-## API Overview
-
-All routes below are prefixed with `/api`. Every route except signup and login
-requires the authentication cookie.
-
-### Health
-| Method | Endpoint       | Description                              |
-|--------|----------------|------------------------------------------|
-| GET    | `/health`      | Liveness probe, no authentication needed |
-
-### Auth
-| Method | Endpoint        | Description         |
-|--------|-----------------|---------------------|
-| POST   | `/auth/signup`  | Create an account   |
-| POST   | `/auth/login`   | Log in              |
-| POST   | `/auth/logout`  | Log out             |
-| GET    | `/auth/me`      | Current session user |
-| PUT    | `/auth/profile` | Update name / avatar |
-| PUT    | `/auth/password`| Change password     |
-
-### Friends
-| Method | Endpoint                  | Description                   |
-|--------|---------------------------|-------------------------------|
-| GET    | `/friends/search?query=`  | Search by username or code    |
-| POST   | `/friends/send/:id`       | Send a friend request         |
-| POST   | `/friends/respond`        | Accept or reject a request    |
-| GET    | `/friends/list`           | List friends                  |
-| GET    | `/friends/requests`       | Incoming requests             |
-| GET    | `/friends/sentRequests`   | Outgoing requests             |
-| DELETE | `/friends/cancel/:id`     | Cancel a sent request         |
-| DELETE | `/friends/remove/:id`     | Remove a friend               |
-
-### Messages
-| Method | Endpoint             | Description                  |
-|--------|----------------------|------------------------------|
-| GET    | `/messages/:id`      | Conversation with a user     |
-| POST   | `/messages/send/:id` | Send a message               |
-| PUT    | `/messages/edit/:id` | Edit your own message        |
-| DELETE | `/messages/:id`      | Delete your own message      |
-| POST   | `/messages/react/:id`| Add or remove a reaction     |
-| GET    | `/messages/unread/counts` | Unread count per sender |
-| DELETE | `/messages/clear/:id`| Clear conversation history   |
-
-### Conversations
-| Method | Endpoint                       | Description                |
-|--------|--------------------------------|----------------------------|
-| GET    | `/conversations`               | List conversations         |
-| GET    | `/conversations/status/:status`| Filter by status           |
-| PUT    | `/conversations/accept/:id`    | Accept a message request   |
-
-## Socket Events
-
-| Event               | Direction        | Purpose                        |
-|---------------------|------------------|--------------------------------|
-| `getOnlineUsers`    | server → client  | Current online user IDs        |
-| `newMessage`        | server → client  | Incoming message               |
-| `messageEdited`     | server → client  | A message was edited           |
-| `messageDeleted`    | server → client  | A message was deleted          |
-| `messageReaction`   | server → client  | A reaction changed             |
-| `messagesRead`      | server → client  | Recipient read your messages   |
-| `userTyping`        | server → client  | Peer is typing                 |
-| `userStoppedTyping` | server → client  | Peer stopped typing            |
-| `newFriendRequest`  | server → client  | Incoming friend request        |
-| `friendRequestResponse` | server → client | Your request was accepted   |
-| `friendRequestRejected` | server → client | Your request was rejected   |
-| `typing`            | client → server  | User started typing            |
-| `stopTyping`        | client → server  | User stopped typing            |
-| `chatOpened`        | client → server  | Mark messages as read          |
-
-## Tests
-
-An end-to-end smoke test boots the server and drives the main flows —
-signup, login, friend requests, messaging, editing, deletion and profile
-changes — together with the authorization and validation rules around
-them. It currently runs 32 checks.
-
-```bash
-npm test                # HTTP smoke test, 36 checks
-npm run test:realtime   # socket delivery, 8 checks
-npm run test:ui         # real browser, desktop and mobile, 17 checks
-npm run test:all        # all three
-```
-
-The browser test needs Chromium once: `npx playwright install chromium`.
-
-The real-time test connects two actual Socket.IO clients and asserts that
-friend requests, messages, typing, reactions and deletions reach the other
-side. The UI test drives a real browser and checks what a person would:
-that nothing overflows, no icon covers an input's text, the console stays
-clean and reactions can be applied by clicking them.
-
-Both need a reachable `MONGO_URI`. They use Node's built-in fetch, so no
-test framework is required.
-
-## Continuous Integration
-
-Every push and pull request to `main` runs three jobs:
-
-| Job              | What it checks                                        |
-|------------------|-------------------------------------------------------|
-| `lint-and-build` | Frontend lints cleanly and builds                      |
-| `api-test`       | API, socket and browser tests against a MongoDB container |
-| `docker`         | Image builds, starts and serves the health endpoint    |
-
-A separate security workflow runs CodeQL analysis, `npm audit` on both
-workspaces and a gitleaks scan over the full history, on every push and weekly on a schedule. Dependabot keeps npm, Docker and Actions versions
-up to date.
-
-## Deployment
-
-The production image serves the built frontend and the API from a single
-port, so it can run anywhere that accepts a container.
-
-```bash
-docker build -t mern-chatapp .
-docker run -d -p 5000:5000   -e NODE_ENV=production   -e MONGO_URI="<your connection string>"   -e JWT_SECRET="<your secret>"   mern-chatapp
-```
-
-Behind a reverse proxy, terminate TLS there and forward to port 5000, and
-set `COOKIE_SECURE=true` so the session cookie is only sent over HTTPS.
-
-## Contributing
-
-`main` stays deployable; changes land through pull requests that CI has to
-pass. Branch naming, commit conventions and the local checks are described
-in [CONTRIBUTING.md](CONTRIBUTING.md).
-
-```bash
-git switch -c feat/your-change
-npm run lint && npm run test:all
-```
-
-## Notes
-
-This project was built as a learning exercise while working through the MERN
-stack, so parts of the source contain explanatory comments in Turkish.
+The app can remain a local Docker project. Hosting a live demo later is optional;
+the same image can sit behind an existing HTTPS reverse proxy.
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+[MIT](LICENSE) · [Oğulcan Tekineş](https://ogulcantekines.com)

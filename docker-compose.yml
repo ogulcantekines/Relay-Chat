@@ -1,36 +1,61 @@
+# Proje adı sabit: konteyner ve volume adları klasör adından bağımsız olur.
+name: relay
+
 services:
   mongo:
     image: mongo:7
     restart: unless-stopped
     environment:
-      MONGO_INITDB_DATABASE: chatapp
+      MONGO_INITDB_DATABASE: relay
     volumes:
       - mongo-data:/data/db
     healthcheck:
-      # Uygulama, veritabanı gerçekten sorgu alabilir duruma gelmeden başlamasın
-      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      test: ["CMD", "mongosh", "--quiet", "--eval", "quit(db.adminCommand('ping').ok ? 0 : 1)"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 20s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   app:
+    image: ${APP_IMAGE:-relay-chat:local}
     build: .
     restart: unless-stopped
+    init: true
+    # Loopback only: local use is private and a future host proxy can share port 443.
     ports:
-      - "${PORT:-5000}:5000"
+      # Varsayılan olarak yalnızca bu makineden erişilir.
+      # Aynı ağdaki başka bir cihazdan (telefon gibi) denemek için
+      # .env içinde BIND_ADDRESS=0.0.0.0 yapın ve CLIENT_URL'i
+      # o adrese göre güncelleyin.
+      - "${BIND_ADDRESS:-127.0.0.1}:${APP_PORT:-5000}:5000"
     environment:
       NODE_ENV: production
       PORT: 5000
-      # Compose ağı içinde servis adı host olarak kullanılır
-      MONGO_URI: mongodb://mongo:27017/chatapp
-      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required, set it in .env}
-      # HTTPS arkasına alındığında .env içinde true yapın
+      MONGO_URI: mongodb://mongo:27017/relay
+      JWT_SECRET: ${JWT_SECRET:?Set a random JWT_SECRET of at least 32 characters in .env}
       COOKIE_SECURE: ${COOKIE_SECURE:-false}
       CLIENT_URL: ${CLIENT_URL:-http://localhost:5000}
+      TRUST_PROXY: ${TRUST_PROXY:-0}
     depends_on:
       mongo:
         condition: service_healthy
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    stop_grace_period: 20s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
 volumes:
   mongo-data:

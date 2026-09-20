@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 
 const conversationSchema = new mongoose.Schema({
+    pairKey: { type: String, unique: true, sparse: true },
     participants: [{
         type: mongoose.Schema.Types.ObjectId, //referans aldığı User nesnelerinin id lerini tutar
         ref: "User" // User modeline referans

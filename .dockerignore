@@ -5,6 +5,8 @@ frontend/dist
 .gitignore
 .env
 .env.*
+**/.env
+**/.env.*
 !.env.example
 npm-debug.log*
 *.log
@@ -13,3 +15,13 @@ README.md
 .github
 .vscode
 .idea
+.agents
+.codex
+.artifacts
+test-results
+playwright-report
+coverage
+backups
+docs
+deploy
+scripts

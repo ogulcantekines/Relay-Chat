@@ -33,3 +33,9 @@ notes.md
 **/node_modules
 frontend/dist
 coverage
+
+# Local browser reports and disposable verification artifacts
+.artifacts/
+test-results/
+playwright-report/
+backups/

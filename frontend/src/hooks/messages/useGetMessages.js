@@ -1,49 +1,78 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import useConversation from '../../zustand/useConversation';
-import toast from 'react-hot-toast';
-
+import useSocket from '../../zustand/useSocket';
+import apiFetch from '../../utils/apiFetch';
 
 const useGetMessages = () => {
-    const [loading, setLoading] = useState(false); //loading state
-    const { messages, setMessages, selectedConversation } = useConversation();//zustanddan gerekli state ve fonksiyonları al
+    const { messages, setMessages, selectedConversation } = useConversation();
+    const connectionVersion = useSocket(state => state.connectionVersion);
+    const id = selectedConversation?._id;
+    const [loading, setLoading] = useState(true);
+    const [loadingOlder, setLoadingOlder] = useState(false);
+    const [hasMore, setHasMore] = useState(false);
+    const [error, setError] = useState('');
+    const [attempt, setAttempt] = useState(0);
+    const olderRequest = useRef(false);
+    const requestVersion = useRef(0);
+    const retry = useCallback(() => setAttempt(value => value + 1), []);
 
     useEffect(() => {
-
-        const getMessages = async () => { //fonksiyon tanımı, çağrılmadıkça çalışmaz, 
-            setLoading(true);
+        if (!id) return;
+        const controller = new AbortController();
+        requestVersion.current += 1;
+        olderRequest.current = false;
+        setLoadingOlder(false);
+        setLoading(true);
+        setHasMore(false);
+        setError('');
+        (async () => {
             try {
-                const res = await fetch(`/api/messages/${selectedConversation._id}`, {//backenddeki messages route'una istek atıyoruz, ${selectedConversation._id} kısmı seçili konuşmanın id'si ve backendde yerine geçer
-                    method: 'GET', //get metodu
-                    headers: { // bu kısmda header bilgisi veriyoruz yani ne tür veri beklediğimizi söylüyoruz
-                        'Content-Type': 'application/json'
-                    }
+                const response = await apiFetch(`/api/messages/${id}?limit=50`, { signal: controller.signal });
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.message || data.error || 'Mesajlar yüklenemedi.');
+                if (controller.signal.aborted || useConversation.getState().selectedConversation?._id !== id) return;
+                // Preserve messages arriving over the socket while the history is in flight.
+                setMessages(current => {
+                    const byId = new Map(data.map(message => [message._id, message]));
+                    for (const message of current) if (!byId.has(message._id)) byId.set(message._id, message);
+                    return [...byId.values()].sort((a, b) => a._id.localeCompare(b._id));
                 });
-                if (res.ok) {
-                    const data = await res.json(); // cevap ok ise js object formatına çevir ve data ya eşitle
-                    setMessages(data || []); // seçili konuşmanın mesajlarını set et zustanddaki setMessages fonksiyonu ile
-                } else {
-                    throw new Error("Failed to fetch messages");
-                }
-            } catch (error) {
-                toast.error(error.message);
+                setHasMore(response.headers.get('X-Has-More') === 'true');
+            } catch (err) {
+                if (err.name !== 'AbortError') setError(err.message);
             } finally {
-                setLoading(false);
+                if (!controller.signal.aborted) setLoading(false);
             }
-        };
+        })();
+        return () => controller.abort();
+    }, [id, connectionVersion, attempt, setMessages]);
 
-        if (selectedConversation?._id) { //null u da false alır ama gerek yok kontrol yapılıyor
-            getMessages();
-        }//uygulama açılırken ilk render oluyor ve konuşma seçili olmadığından
-        //null oluyor. selectedConversation null olunca selectedConversation._id kısmı hata veriyor
-        //bunun için güvenli erişim operatörü ? kullanıyoruz. selectedConversation null ise hata vermez
-        //undefined olur ve if kontrolü false döner. selectedConversation null değilse ._id kısmına erişir konuşma seçildiyse mesajları yükler
-
-    }, [selectedConversation?._id, setMessages]); //güvenli erişim operatörü ile selectedConversation null ise hata verme
-    //burada ? kullanımı, selectedConversation null olduğunda bile hatasız çalışmasını sağlar aama bizim kod yapımızda
-    //null olma durumu zaten kontrol ediliyor nochatselected kısmında eğer chat seçili ise yani selectedConversation null değilse mesajları yükle diyoruz
-    //ondan gerek yok ama ek bir güvenlik katmanı olarak kullanılabilir
-
-    return { loading, messages };
+    const loadOlder = async () => {
+        const first = useConversation.getState().messages[0]?._id;
+        if (!id || !first || olderRequest.current || !hasMore) return;
+        olderRequest.current = true;
+        const version = requestVersion.current;
+        setLoadingOlder(true);
+        setError('');
+        try {
+            const response = await apiFetch(`/api/messages/${id}?before=${first}&limit=50`);
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.message || data.error || 'Önceki mesajlar yüklenemedi.');
+            if (version !== requestVersion.current || useConversation.getState().selectedConversation?._id !== id) return;
+            setMessages(current => {
+                const known = new Set(current.map(message => message._id));
+                return [...data.filter(message => !known.has(message._id)), ...current];
+            });
+            setHasMore(response.headers.get('X-Has-More') === 'true');
+        } catch (err) {
+            if (err.name !== 'AbortError' && version === requestVersion.current) setError(err.message);
+        } finally {
+            if (version === requestVersion.current) {
+                olderRequest.current = false;
+                setLoadingOlder(false);
+            }
+        }
+    };
+    return { messages, loading, loadingOlder, hasMore, error, retry, loadOlder };
 };
-
 export default useGetMessages;

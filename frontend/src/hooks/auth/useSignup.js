@@ -1,30 +1,31 @@
+import { passwordIsValid } from '../../utils/password';
+import { notifySessionChange } from '../../utils/sessionEvents';
+import apiFetch from '../../utils/apiFetch';
 import { useState } from "react";
 import toast from "react-hot-toast";
 import useAuth from "../../zustand/useAuth";
-import useSocket from "../../zustand/useSocket";
 
 
 const useSignup = () => {
     const [loading, setLoading] = useState(false); //yükleniyor durumu
     const setAuthUser = useAuth((state) => state.setAuthUser); //Zustand store'daki setAuthUser fonksiyonu. auth işlemleri her yerde kullanılabilmesi için Zustand store'da tutuluyor
     // const setAuthUser = useAuth(); böyle de kullanılır ama zustand ile genelde state tercih edilir.
-    const { connectSocket } = useSocket(); //Socket bağlantısı için kullanılır(io bağlantısı)
 
     const handleInputErrors = (userData) => { //input hatalarını kontrol eden fonksiyon
         const { fullName, username, password, confirmPassword, gender } = userData;
 
         if (!username || !fullName || !password || !confirmPassword || !gender) {
-            toast.error("All fields are required");
+            toast.error("Tüm alanları doldur");
             return false;
         }
 
         if (password !== confirmPassword) {
-            toast.error("Passwords do not match");
+            toast.error("Parolalar eşleşmiyor");
             return false;
         }
 
-        if (password.length < 6) {
-            toast.error("Password must be at least 6 characters");
+        if (!passwordIsValid(password)) {
+            toast.error("Parola en az 8 karakter ve en fazla 72 UTF-8 bayt olmalı");
             return false;
         }
 
@@ -37,7 +38,7 @@ const useSignup = () => {
 
         setLoading(true);
         try {
-            const res = await fetch('/api/auth/signup', { //backende istek atılıyor
+            const res = await apiFetch('/api/auth/signup', { //backende istek atılıyor
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -48,20 +49,20 @@ const useSignup = () => {
             const data = await res.json(); //response json formatına çevriliyor
 
             if (!res.ok) {
-                throw new Error(data.message || "Sign up failed");
+                throw new Error(data.message || "Hesap oluşturulamadı");
             }
 
-            // Success case - Sadece Zustand store'a kaydet (localStorage otomatik olur)
+            // Keep the public profile in memory after the server creates the session.
 
             const userToSave = data.user || data; // API yanıtında user objesi olabilir veya doğrudan data olabilir
-            setAuthUser(userToSave); // Zustand store'daki setAuthUser fonksiyonu ile kullanıcı bilgisi kaydediliyor, localStorage'a kaydediliyor oradaki fonksiyonun içinde
-            connectSocket(userToSave._id); //io bağlantısı kuruluyor
+            setAuthUser(userToSave);
+            notifySessionChange(); // Other tabs revalidate the shared session cookie.
 
-            toast.success("Sign up successful");
+            toast.success("Hesabın oluşturuldu");
 
         } catch (err) {
             console.error("Signup error:", err);
-            toast.error(err.message);
+            if (err.name !== 'AbortError') toast.error(err.message);
         } finally {
             setLoading(false); //işlem bittiğinde loading false yapılır
         }

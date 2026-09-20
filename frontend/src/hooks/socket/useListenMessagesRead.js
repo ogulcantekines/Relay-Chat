@@ -5,7 +5,7 @@ import useAuth from "../../zustand/useAuth";
 
 const useListenMessagesRead = () => {
     const { socket } = useSocket(); //frontend side socket bağlantısı
-    const { messages, setMessages } = useConversation(); //zustanddan gerekli state ve fonksiyonları al
+    const { setMessages } = useConversation(); //zustanddan gerekli state ve fonksiyonları al
     //authUser ı alırken direkt objeyi alıyoruz çünkü burada sadece id'ye ihtiyacımız var
     //eğer useAuth((state) => state.authUser) yaparsak her authUser değiştiğinde bu hook yeniden çalışır ama yinede çalışır
     const { authUser } = useAuth();
@@ -17,7 +17,7 @@ const useListenMessagesRead = () => {
             const { readByUserId } = data;
             
             // Karşı taraf mesajlarımı okudu - kendi gönderdiğim mesajları güncelle
-            setMessages(messages.map(msg => {
+            setMessages(messages => messages.map(msg => {
             // Koşullar: Hangi mesajları güncelleyeceğiz?
             
                 if (String(msg.senderId) === String(authUser._id) &&     // Ben gönderdim mi?
@@ -31,7 +31,7 @@ const useListenMessagesRead = () => {
 
         return () => socket.off("messagesRead");
 
-    }, [socket, messages, setMessages, authUser]);
+    }, [socket, setMessages, authUser]);
 };
 
 export default useListenMessagesRead;

@@ -1,86 +1,50 @@
 import { useEffect } from 'react';
 import useSocket from '../../zustand/useSocket';
 import useConversation from '../../zustand/useConversation';
+import useFriendStore from '../../zustand/useFriend';
 import useAuth from '../../zustand/useAuth';
 import useUnread from '../../zustand/useUnread';
 import playSound from '../../utils/playSound';
 
-// Real-time mesajları dinleyen hook - gelen yeni mesajları state'e ekler
 const useListenMessages = () => {
-    const { socket } = useSocket(); //frontend side socket bağlantısı
-    const {
-        messages,
-        setMessages,
-        selectedConversation,
-        conversations,
-        setConversations
-    } = useConversation();
-    const authUser = useAuth((state) => state.authUser); //localstoragedan okunan kullanıcı
-    const { increment } = useUnread();
-
+    const socket = useSocket(state => state.socket);
+    const userId = useAuth(state => state.authUser?._id);
     useEffect(() => {
+        if (!socket || !userId) return;
+        const onMessage = (message) => {
+            if (useAuth.getState().authUser?._id !== userId) return;
+            const state = useConversation.getState();
+            const incoming = message.senderId !== userId;
+            const otherId = incoming ? message.senderId : message.receiverId;
+            const selected = state.selectedConversation?._id === otherId;
+            const visible = selected && document.visibilityState === 'visible';
+            if (selected) state.setMessages(items => items.some(item => item._id === message._id) ? items : [...items, message]);
+            if (visible && incoming) socket.emit('chatOpened', { otherUserId: otherId });
 
-        if (!socket || !authUser || !authUser._id) return; // socket veya kullanıcı yoksa çık
-
-        const handleNewMessage = (newMessage) => {
-            const isFromOther = newMessage.senderId !== authUser._id;
-            const isChatOpen = selectedConversation && newMessage.senderId === selectedConversation._id;
-
-            // SADECE aktif konuşmaya ait mesajları listeye ekle
-            if (selectedConversation &&
-                (newMessage.senderId === selectedConversation._id ||
-                    newMessage.receiverId === selectedConversation._id)) {
-                setMessages([...messages, newMessage]);
-
-                // Chat açıkken mesaj geldiyse hemen okundu işaretle
-                if (isChatOpen && socket) {
-                    socket.emit("chatOpened", {
-                        otherUserId: selectedConversation._id
-                    });
+            const existing = state.conversations.find(item => item._id === otherId);
+            const person = existing || (incoming ? message.sender : null);
+            if (person) {
+                const conversation = {
+                    ...person,
+                    status: message.conversationStatus || person.status || 'active',
+                    conversationId: message.conversationId || person.conversationId,
+                    lastMessage: message,
+                };
+                if (conversation.status === 'pending' && incoming) {
+                    const friendStore = useFriendStore.getState();
+                    friendStore.setMessageRequests([conversation, ...friendStore.messageRequests.filter(item => item._id !== otherId)]);
+                } else {
+                    state.setConversations(items => [conversation, ...items.filter(item => item._id !== otherId)]);
                 }
+                if (selected) state.setSelectedConversation({ ...state.selectedConversation, ...conversation });
             }
-
-            if (isFromOther) {
-                // Sohbet kapalıysa okunmamış sayacını artır
-                if (!isChatOpen) increment(newMessage.senderId);
-
-                // Gönderen kenar çubuğunda yoksa sohbeti anında oluştur.
-                // Önceden bu durumda sayfayı yenilemek gerekiyordu; backend artık
-                // mesajla birlikte gönderenin bilgisini de yolladığı için
-                // kutucuk kendiliğinden açılabiliyor.
-                const exists = conversations.some(c => c._id === newMessage.senderId);
-                if (!exists && newMessage.sender) {
-                    setConversations([
-                        {
-                            ...newMessage.sender,
-                            status: newMessage.conversationStatus || "active",
-                            lastMessage: newMessage
-                        },
-                        ...conversations
-                    ]);
-                } else if (exists) {
-                    // Varsa son mesajı güncelle ve listenin en üstüne taşı
-                    const updated = conversations.map(c =>
-                        c._id === newMessage.senderId ? { ...c, lastMessage: newMessage } : c
-                    );
-                    const moved = updated.find(c => c._id === newMessage.senderId);
-                    setConversations([moved, ...updated.filter(c => c._id !== newMessage.senderId)]);
-                }
-
-                playSound(isChatOpen);
+            if (incoming) {
+                if (!visible) useUnread.getState().increment(otherId);
+                playSound(visible);
             }
         };
-
-        // Server'dan gelen "newMessage" eventini dinle
-        socket.on("newMessage", handleNewMessage);
-
-        return () => {
-            socket.off("newMessage", handleNewMessage);
-        };
-        //useEffect'in cleanup fonksiyonu: component unmount olduğunda veya
-        //bağımlılıklar değiştiğinde önceki listener temizlenir, böylece
-        //aynı olay birden fazla kez işlenmez ve hafıza sızıntısı önlenir
-    }, [socket, messages, setMessages, selectedConversation, authUser, conversations, setConversations, increment]);
+        socket.on('newMessage', onMessage);
+        return () => socket.off('newMessage', onMessage);
+    }, [socket, userId]);
 };
-
 export default useListenMessages;

@@ -1,3 +1,4 @@
+import apiFetch from '../../utils/apiFetch';
 import { useState } from 'react';
 import toast from 'react-hot-toast';
 import useAuth from '../../zustand/useAuth';
@@ -11,7 +12,7 @@ const useUpdateProfile = () => {
     const updateProfile = async ({ fullName, profilePic }) => {
         setLoading(true);
         try {
-            const res = await fetch("/api/auth/profile", {
+            const res = await apiFetch("/api/auth/profile", {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ fullName, profilePic }),
@@ -25,7 +26,7 @@ const useUpdateProfile = () => {
             toast.success("Profil güncellendi");
             return true;
         } catch (error) {
-            toast.error(error.message);
+            if (error.name !== 'AbortError') toast.error(error.message);
             return false;
         } finally {
             setLoading(false);

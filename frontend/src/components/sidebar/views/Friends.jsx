@@ -1,3 +1,4 @@
+import Avatar from '../../Avatar';
 import { useState } from "react";
 import { IoArrowBack } from "react-icons/io5";
 import { FiMessageSquare, FiUserMinus, FiCheck, FiX } from "react-icons/fi";
@@ -148,8 +149,8 @@ const Friends = ({ onBack, initialTab }) => {
                                     >
                                         {/* Avatar + Online göstergesi */}
                                         <div className="relative">
-                                            <img
-                                                src={friend.profilePic}
+                                            <Avatar
+                                                name={friend.fullName} src={friend.profilePic}
                                                 alt={friend.username}
                                                 className="w-12 h-12 rounded-full"
                                             />
@@ -222,7 +223,7 @@ const Friends = ({ onBack, initialTab }) => {
                                             key={request._id}
                                             className="flex items-center gap-3 p-3 rounded-xl" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)' }}
                                         >
-                                            <img
+                                            <Avatar
                                                 src={request.senderId.profilePic}
                                                 alt={request.senderId.username}
                                                 className="w-12 h-12 rounded-full"
@@ -282,7 +283,7 @@ const Friends = ({ onBack, initialTab }) => {
                                             key={request._id}
                                             className="flex items-center gap-3 p-3 rounded-xl" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)' }}
                                         >
-                                            <img
+                                            <Avatar
                                                 src={request.receiverId.profilePic}
                                                 alt={request.receiverId.username}
                                                 className="w-12 h-12 rounded-full"

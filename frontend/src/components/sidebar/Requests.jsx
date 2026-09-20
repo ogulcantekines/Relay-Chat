@@ -1,3 +1,4 @@
+import Avatar from '../Avatar';
 import useFriendStore from "../../zustand/useFriend";
 import useConversation from "../../zustand/useConversation";
 
@@ -45,16 +46,17 @@ const Requests = () => {
                             <div className="space-y-2">
                                 {/* Her bir mesaj isteği için kart render et */}
                                 {messageRequests.map((request) => (
-                                    <div
+                                    <button
+                                        type='button'
                                         key={request._id}
                                         onClick={() => handleViewMessage(request)}
-                                        className="flex items-center gap-3 p-3 bg-[color:var(--bg-panel)] hover:bg-[color:var(--bg-elevated)] rounded-lg cursor-pointer transition-colors border border-transparent hover:border-[color:var(--accent)]/30"
+                                        className="w-full text-left flex items-center gap-3 p-3 bg-[color:var(--bg-panel)] hover:bg-[color:var(--bg-elevated)] rounded-lg cursor-pointer transition-colors border border-transparent hover:border-[color:var(--accent)]/30"
                                     >
                                         {/* Avatar */}
                                         <div className="avatar">
                                             <div className="w-12 rounded-full border border-[color:var(--border-subtle)]">
-                                                <img
-                                                    src={request.profilePic}
+                                                <Avatar
+                                                    name={request.fullName} src={request.profilePic}
                                                     alt={request.username}
                                                 />
                                             </div>
@@ -66,15 +68,15 @@ const Requests = () => {
                                                 {request.fullName}
                                             </p>
                                             <p className="text-sm text-[color:var(--text-muted)]">
-                                                Wants to send you a message
+                                                Sana mesaj göndermek istiyor
                                             </p>
                                         </div>
 
                                         {/* Tıklama göstergesi */}
                                         <div className="text-[color:var(--text-muted)] text-xs">
-                                            Click to view
+                                            Görüntüle
                                         </div>
-                                    </div>
+                                    </button>
                                 ))}
                             </div>
                         </div>

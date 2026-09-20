@@ -1,3 +1,4 @@
+import apiFetch from '../../utils/apiFetch';
 import {useState} from "react";
 import toast from "react-hot-toast";
 import useConversation from "../../zustand/useConversation";
@@ -11,7 +12,7 @@ const useClearConversation = () => {
         setLoading(true);
 
         try{
-            const res = await fetch(`/api/messages/clear/${userToChatId}`, { //backenddeki route a istek atıyoruz
+            const res = await apiFetch(`/api/messages/clear/${userToChatId}`, { //backenddeki route a istek atıyoruz
                 method: 'DELETE', //crud işleminden silme işlemi
                 headers: {
                     'Content-Type': 'application/json' 
@@ -22,10 +23,11 @@ const useClearConversation = () => {
             // artık data bir js objesi! ✅
 
             if(res.ok) {
-                toast.success(`${data.deletedCount} messages deleted successfully`);
-                setMessages([]); // mesajları temizle, boş array yap
+                toast.success("Sohbet geçmişi temizlendi");
+                if (useConversation.getState().selectedConversation?._id === userToChatId) setMessages([]);
+                useConversation.getState().setConversations(items => items.map(item => item._id === userToChatId ? { ...item, lastMessage: null } : item)); // mesajları temizle, boş array yap
             } else {
-                throw new Error(data.error || "Failed to clear conversation");
+                throw new Error(data.error || "Sohbet temizlenemedi");
             }
 
             //error handling

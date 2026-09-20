@@ -1,3 +1,5 @@
+import { refreshConversationStatuses } from '../../utils/refreshConversations';
+import apiFetch from '../../utils/apiFetch';
 import { useState } from "react";
 import toast from "react-hot-toast";
 import useFriendStore from "../../zustand/useFriend";
@@ -20,7 +22,7 @@ const useRespondToFriendRequests = () => {
             // respondToFriendRequest controller'ı çalışır:
             // Kabul: her iki kullanıcının friends dizisine birbirini ekler + FriendRequest status'u "accepted" yapar
             // Red: FriendRequest status'u "rejected" yapar
-            const res = await fetch("/api/friends/respond", {
+            const res = await apiFetch("/api/friends/respond", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -30,22 +32,23 @@ const useRespondToFriendRequests = () => {
             const data = await res.json();
 
             if (!res.ok) {
-                throw new Error(data.message || "Failed to respond to friend request");
+                throw new Error(data.message || "Arkadaşlık isteği yanıtlanamadı");
             }
 
             if (response === "accept") {
                 // Kabul edildi → Zustand store'dan isteği kaldır + yeni arkadaşı ekle
                 removeIncomingFriendRequest(requestId);
-                addFriend(data.friend); // Backend kabul edilen arkadaşın bilgilerini döner
+                addFriend(data.friend);
+                refreshConversationStatuses(); // Backend kabul edilen arkadaşın bilgilerini döner
             } else {
                 // Red edildi → Sadece isteği listeden kaldır
                 removeIncomingFriendRequest(requestId);
             }
 
-            toast.success("Friend request " + response); // "Friend request accept" veya "Friend request reject"
+            toast.success(response === "accept" ? "Arkadaşlık isteği kabul edildi" : "Arkadaşlık isteği reddedildi"); // "Friend request accept" veya "Friend request reject"
         } catch (error) {
             console.error("Error responding to friend request:", error.message);
-            toast.error("Failed to respond to friend request");
+            if (error.name !== "AbortError") toast.error("Arkadaşlık isteği yanıtlanamadı");
         } finally {
             setLoading(false);
         }

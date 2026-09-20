@@ -1,3 +1,4 @@
+import Avatar from '../../Avatar';
 import { useState } from "react";
 import { FaArrowLeft, FaUserPlus, FaSearch, FaComment } from "react-icons/fa";
 import useSearchUsers from "../../../hooks/friends/useSearchUsers";
@@ -16,7 +17,7 @@ const AddFriend = ({ onBack }) => {
     const [searchQuery, setSearchQuery] = useState("");
 
     // Hook'lar
-    const { users, loading: searchLoading } = useSearchUsers(searchQuery); // Debounce ile arama
+    const { users, loading: searchLoading, error: searchError } = useSearchUsers(searchQuery); // Debounce ile arama
     const { sendFriendRequest, loading: sendLoading } = useSendFriendRequest(); // Arkadaşlık isteği gönder
     const { conversations, setSelectedConversation } = useConversation();
 
@@ -79,6 +80,8 @@ const AddFriend = ({ onBack }) => {
                     <input
                         type="text"
                         placeholder="Kullanıcı adı veya arkadaş kodu..."
+                        aria-label="Kullanıcı adı veya arkadaş kodu"
+                        maxLength={20}
                         className="input input-bordered rounded-full w-full bg-[color:var(--bg-panel)] text-white border-[color:var(--border-subtle)] focus:border-[color:var(--accent)] pl-10"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
@@ -93,6 +96,7 @@ const AddFriend = ({ onBack }) => {
 
             {/* ═══════════ SONUÇ LİSTESİ ═══════════ */}
             <div className="flex-1 overflow-y-auto px-2">
+                {searchError && <p role="alert" className="text-sm text-red-300 p-4">{searchError}</p>}
                 {/* Loading durumu */}
                 {searchLoading && (
                     <div className="flex justify-center py-8">
@@ -135,7 +139,7 @@ const AddFriend = ({ onBack }) => {
                                 {/* Avatar */}
                                 <div className="avatar">
                                     <div className="w-12 rounded-full">
-                                        <img src={user.profilePic} alt={user.username} />
+                                        <Avatar name={user.fullName} src={user.profilePic} alt={user.username} />
                                     </div>
                                 </div>
 

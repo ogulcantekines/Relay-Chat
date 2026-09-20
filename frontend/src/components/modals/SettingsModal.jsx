@@ -1,3 +1,6 @@
+import Dialog from './Dialog';
+import { passwordIsValid } from '../../utils/password';
+import Avatar from '../Avatar';
 import { useState } from "react";
 import { IoClose, IoCopyOutline, IoCheckmark } from "react-icons/io5";
 import useAuth from "../../zustand/useAuth";
@@ -24,11 +27,11 @@ const SettingsModal = ({ onClose }) => {
     const [confirmPassword, setConfirmPassword] = useState("");
 
     const nameValid = fullName.trim().length > 0 && fullName.trim().length <= 50;
-    const picValid = profilePic === "" || /^https?:\/\/\S+$/i.test(profilePic);
+    const picValid = profilePic === '' || (/^https:\/\/\S+$/i.test(profilePic) && profilePic.length <= 2048);
     const profileChanged = fullName !== authUser?.fullName || profilePic !== authUser?.profilePic;
 
     const passwordsMatch = confirmPassword === "" || newPassword === confirmPassword;
-    const passwordValid = newPassword.length >= 6;
+    const passwordValid = passwordIsValid(newPassword);
     const canChangePassword =
         currentPassword.length > 0 && passwordValid && newPassword === confirmPassword;
 
@@ -60,22 +63,13 @@ const SettingsModal = ({ onClose }) => {
     };
 
     return (
-        // Arka plana tıklayınca kapanır; içeriğe tıklama kapatmaz
-        <div
-            className="fixed inset-0 z-50 flex items-center justify-center p-4"
-            style={{ background: "rgba(3, 5, 10, 0.72)", backdropFilter: "blur(6px)" }}
-            onClick={onClose}
-        >
-            <div
-                className="surface-glass rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto scroll-slim animate-pop"
-                onClick={(e) => e.stopPropagation()}
-            >
+        <Dialog onClose={onClose} labelledBy="settings-title">
                 {/* Başlık */}
                 <div
                     className="flex items-center justify-between px-5 py-4"
                     style={{ borderBottom: "1px solid var(--border-subtle)" }}
                 >
-                    <h2 className="text-base font-semibold" style={{ color: "var(--text-primary)" }}>
+                    <h2 id="settings-title" className="text-base font-semibold" style={{ color: "var(--text-primary)" }}>
                         Hesap ayarları
                     </h2>
                     <button onClick={onClose} className="w-9 h-9 icon-btn" title="Kapat">
@@ -107,11 +101,10 @@ const SettingsModal = ({ onClose }) => {
                     <form onSubmit={handleSaveProfile} className="flex flex-col gap-4 p-5">
                         {/* Önizleme */}
                         <div className="flex items-center gap-3">
-                            <img
-                                src={profilePic || authUser?.profilePic}
+                            <Avatar
+                                name={fullName} src={profilePic || authUser?.profilePic}
                                 alt=""
                                 className="w-14 h-14 avatar-ring"
-                                onError={(e) => { e.currentTarget.src = authUser?.profilePic; }}
                             />
                             <div className="min-w-0">
                                 <div className="font-medium text-sm truncate" style={{ color: "var(--text-primary)" }}>
@@ -148,6 +141,7 @@ const SettingsModal = ({ onClose }) => {
                             </label>
                             <input
                                 id="set-pic"
+                                maxLength={2048}
                                 type="url"
                                 className="field"
                                 placeholder="https://..."
@@ -156,7 +150,7 @@ const SettingsModal = ({ onClose }) => {
                             />
                             {!picValid && (
                                 <span className="text-xs" style={{ color: "var(--danger)" }}>
-                                    Adres http:// veya https:// ile başlamalı
+                                    HTTPS adresi kullan (en fazla 2048 karakter)
                                 </span>
                             )}
                         </div>
@@ -228,13 +222,13 @@ const SettingsModal = ({ onClose }) => {
                                 type="password"
                                 autoComplete="new-password"
                                 className="field"
-                                placeholder="En az 6 karakter"
+                                placeholder="En az 8 karakter"
                                 value={newPassword}
                                 onChange={(e) => setNewPassword(e.target.value)}
                             />
                             {newPassword !== "" && !passwordValid && (
                                 <span className="text-xs" style={{ color: "var(--danger)" }}>
-                                    Şifre en az 6 karakter olmalı
+                                    Şifre en az 8 karakter ve en fazla 72 UTF-8 bayt olmalı
                                 </span>
                             )}
                         </div>
@@ -267,8 +261,7 @@ const SettingsModal = ({ onClose }) => {
                         </button>
                     </form>
                 )}
-            </div>
-        </div>
+        </Dialog>
     );
 };
 

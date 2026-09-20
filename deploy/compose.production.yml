@@ -1,0 +1,18 @@
+# Optional: use only when a host reverse proxy terminates HTTPS.
+# docker compose -f docker-compose.yml -f deploy/compose.production.yml up --build -d --wait
+services:
+  app:
+    environment:
+      COOKIE_SECURE: "true"
+      TRUST_PROXY: "1"
+      CLIENT_URL: ${CLIENT_URL:?Set CLIENT_URL to the public HTTPS origin}
+    mem_limit: 512m
+    cpus: 1.0
+    pids_limit: 128
+
+  mongo:
+    # Baselines for a small instance; measure before changing them.
+    command: ["mongod", "--bind_ip_all", "--wiredTigerCacheSizeGB", "0.25"]
+    mem_limit: 768m
+    cpus: 1.0
+    pids_limit: 256

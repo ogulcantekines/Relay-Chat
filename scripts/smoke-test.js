@@ -3,7 +3,7 @@
 // ve herhangi bir adım beklenen sonucu vermezse sıfırdan farklı kodla çıkar.
 // Harici bir test kütüphanesi kullanmaz; Node ile doğrudan çalışır.
 
-import { spawn } from "child_process";
+import { startTestServer } from "./test-server.js";
 
 const PORT = process.env.PORT || 5000;
 const BASE = `http://127.0.0.1:${PORT}`;
@@ -62,10 +62,7 @@ const user = (n) => ({
 
 async function run() {
     console.log("Starting server...");
-    const server = spawn("node", ["backend/server.js"], {
-        stdio: ["ignore", "inherit", "inherit"],
-        env: process.env
-    });
+    const server = await startTestServer();
 
     let exitCode = 1;
 
@@ -85,7 +82,7 @@ async function run() {
 
         const signupA = await api("/api/auth/signup", { method: "POST", body: a });
         check("signup succeeds", signupA.status === 201, `got ${signupA.status}`);
-        const cookieA = cookieFrom(signupA);
+        let cookieA = cookieFrom(signupA);
         check("signup sets an auth cookie", cookieA.includes("token="));
 
         const signupB = await api("/api/auth/signup", { method: "POST", body: b });
@@ -238,6 +235,7 @@ async function run() {
             body: { currentPassword: a.password, newPassword: "newpass123" }
         });
         check("password can be changed", changed.status === 200, `got ${changed.status}`);
+        cookieA = cookieFrom(changed);
 
         const loginNew = await api("/api/auth/login", {
             method: "POST",
@@ -315,9 +313,9 @@ async function run() {
         console.error("\nSmoke test crashed:", error);
         exitCode = 1;
     } finally {
-        server.kill("SIGTERM");
-        setTimeout(() => process.exit(exitCode), 300);
+        await server.stop();
+        process.exitCode = exitCode;
     }
 }
 
-run();
+run().catch((error) => { console.error(error.message); process.exitCode = 1; });

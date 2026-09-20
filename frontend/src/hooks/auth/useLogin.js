@@ -1,7 +1,8 @@
+import { notifySessionChange } from '../../utils/sessionEvents';
+import apiFetch from '../../utils/apiFetch';
 import { useState } from "react";
 import toast from "react-hot-toast";
 import useAuth from "../../zustand/useAuth";
-import useSocket from "../../zustand/useSocket";
 
 const useLogin = () => {
     const [loading, setLoading] = useState(false); //yükleniyor durumu
@@ -9,12 +10,11 @@ const useLogin = () => {
     const setAuthUser = useAuth((state) => state.setAuthUser);//zustanddaki setAuthUser fonksiyonunu alıyoruz
     //const { setAuthUser } = useAuth(); //destructorla da alabiliriz ama bu kodda stateli kullanımını göstermek istiyoruz
     //yani state ile alıp setAuthUsera eşitledik
-    const { connectSocket } = useSocket(); //socket bağlantısı kurmak için, anlık server bağlantısı
 
     const handleInputErrors = (userData) => { //input hatalarını kontrol eden fonksiyon
         const { username, password } = userData;
         if (!username || !password) { //js de "falsy" değerlere false der, boş string, null, undefined, 0, NaN hepsi false kabul edilir
-            toast.error("All fields are required");
+            toast.error("Tüm alanları doldur");
             return false;
         }
         return true;
@@ -27,7 +27,7 @@ const useLogin = () => {
 
         setLoading(true);
         try {
-            const res = await fetch('/api/auth/login', {
+            const res = await apiFetch('/api/auth/login', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -37,18 +37,18 @@ const useLogin = () => {
 
             const data = await res.json();
             if (!res.ok) {
-                throw new Error(data.message || "Login failed");
+                throw new Error(data.message || "Giriş yapılamadı");
             }
-            // Success case - Sadece Zustand store'a kaydet (localStorage otomatik olur yani zustand içinde localStorage'a kaydediliyor)
+            // Keep the public profile in memory; authentication remains in the HttpOnly cookie.
             const userToSave = data.user || data;
-            setAuthUser(userToSave); // Zustand store'daki setAuthUser fonksiyonu ile kullanıcı bilgisi kaydediliyor
-            connectSocket(userToSave._id);// localstorage a kaydedilen userın id sini alıp socket bağlantısı kuruyoruz
+            setAuthUser(userToSave);
+            notifySessionChange(); // Zustand store'daki setAuthUser fonksiyonu ile kullanıcı bilgisi kaydediliyor
 
-            toast.success("Login successful");
+            toast.success("Hoş geldin");
             
         } catch (err) {
             console.error("Login error:", err);
-            toast.error(err.message);
+            if (err.name !== 'AbortError') toast.error(err.message);
         }     finally {
             setLoading(false);
         }

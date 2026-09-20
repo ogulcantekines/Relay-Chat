@@ -1,34 +1,24 @@
 import { useEffect } from 'react';
 import useUnread from '../../zustand/useUnread';
 import useAuth from '../../zustand/useAuth';
+import useSocket from '../../zustand/useSocket';
+import apiFetch from '../../utils/apiFetch';
 
-// Oturum açıldığında okunmamış sayıları bir kez sunucudan çeker.
-// Sonraki değişiklikler socket olaylarıyla yerel olarak güncellenir.
 const useUnreadCounts = () => {
-    const { setCounts, reset } = useUnread();
-    const authUser = useAuth((state) => state.authUser);
-
+    const userId = useAuth(state => state.authUser?._id);
+    const connectionVersion = useSocket(state => state.connectionVersion);
     useEffect(() => {
-        if (!authUser) {
-            reset();
-            return;
-        }
-
-        let cancelled = false;
-
+        if (!userId) return;
+        const controller = new AbortController();
         (async () => {
             try {
-                const res = await fetch("/api/messages/unread/counts");
-                if (!res.ok) return;
-                const data = await res.json();
-                if (!cancelled) setCounts(data);
-            } catch {
-                // Sayaçlar kritik değil; hata durumunda sessizce geç
-            }
+                const response = await apiFetch('/api/messages/unread/counts', { signal: controller.signal });
+                if (!response.ok) return;
+                const counts = await response.json();
+                if (!controller.signal.aborted) useUnread.getState().setCounts(counts);
+            } catch { /* A reconnect refreshes unread counts again. */ }
         })();
-
-        return () => { cancelled = true; };
-    }, [authUser, setCounts, reset]);
+        return () => controller.abort();
+    }, [userId, connectionVersion]);
 };
-
 export default useUnreadCounts;

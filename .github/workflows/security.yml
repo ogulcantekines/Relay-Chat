@@ -2,68 +2,78 @@ name: Security
 
 on:
   push:
-    branches: [main]
+    branches: [main, "release/**"]
   pull_request:
     branches: [main]
   schedule:
-    # Yeni açıklanan zafiyetleri yakalamak için haftalık tarama
     - cron: "0 6 * * 1"
+  workflow_dispatch:
 
 permissions:
   contents: read
 
+concurrency:
+  group: security-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
 jobs:
   codeql:
     name: CodeQL analysis
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
     permissions:
-      security-events: write
       contents: read
-
+      security-events: write
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: github/codeql-action/init@v3
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: github/codeql-action/init@1c5b675653bb5c22dbe9b12b556ec555138e09fd # v4
         with:
           languages: javascript-typescript
+          build-mode: none
           queries: security-and-quality
-
-      - uses: github/codeql-action/analyze@v3
+      - uses: github/codeql-action/analyze@1c5b675653bb5c22dbe9b12b556ec555138e09fd # v4
         with:
-          category: "/language:javascript-typescript"
+          category: /language:javascript-typescript
 
   audit:
     name: Dependency audit
-    runs-on: ubuntu-latest
-
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
         with:
           node-version: 22
-
-      # Yüksek ve kritik seviyedeki zafiyetlerde başarısız ol
-      - name: Audit backend dependencies
+      - name: Audit backend lockfile
         run: npm audit --audit-level=high
-
-      - name: Audit frontend dependencies
+      - name: Audit frontend lockfile
+        if: success() || failure()
         run: npm audit --audit-level=high
         working-directory: frontend
 
   secrets:
     name: Secret scan
-    runs-on: ubuntu-latest
-
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           fetch-depth: 0
-
-      # gitleaks action'ı organizasyon repolarında lisans anahtarı istiyor;
-      # burada aracın kendisini doğrudan çalıştırıyoruz.
-      - name: Scan history for committed secrets
+          persist-credentials: false
+      - name: Install checksum-verified Gitleaks
         run: |
-          curl -sSL -o gitleaks.tar.gz             https://github.com/gitleaks/gitleaks/releases/download/v8.28.0/gitleaks_8.28.0_linux_x64.tar.gz
-          tar -xzf gitleaks.tar.gz gitleaks
-          ./gitleaks detect --source . --redact --verbose --exit-code 1
+          curl --fail --silent --show-error --location --retry 3 \
+            -o "$RUNNER_TEMP/gitleaks.tar.gz" \
+            https://github.com/gitleaks/gitleaks/releases/download/v8.28.0/gitleaks_8.28.0_linux_x64.tar.gz
+          echo "a65b5253807a68ac0cafa4414031fd740aeb55f54fb7e55f386acb52e6a840eb  $RUNNER_TEMP/gitleaks.tar.gz" | sha256sum --check
+          tar -xzf "$RUNNER_TEMP/gitleaks.tar.gz" -C "$RUNNER_TEMP" gitleaks
+      - name: Scan the complete history
+        run: '"$RUNNER_TEMP/gitleaks" git --redact --no-banner --exit-code 1 .'

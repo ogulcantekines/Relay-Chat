@@ -9,7 +9,7 @@ const Home = () => {
 		// Masaüstünde iki sütun; dar ekranda tek sütun: sohbet seçiliyse sohbet,
 		// değilse liste görünür (mobil mesajlaşma uygulamalarındaki davranış).
 		<div
-			className='surface w-full h-full sm:h-[min(92vh,900px)] sm:max-w-[1400px] sm:rounded-2xl overflow-hidden flex shadow-2xl'
+			className='surface w-full h-full sm:h-[min(92dvh,900px)] sm:max-w-[1400px] sm:rounded-2xl overflow-hidden flex shadow-2xl'
 		>
 			<div
 				className={`${selectedConversation ? 'hidden' : 'flex'} md:flex w-full md:w-[340px] lg:w-[380px] flex-shrink-0 flex-col`}
